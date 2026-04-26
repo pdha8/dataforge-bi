@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+
+# Laravel
+Integrated_BI_backend_laravel/vendor/
+Integrated_BI_backend_laravel/node_modules/
+
+# Vue.js
+Integrated_BI_frontend_vue/node_modules/
+Integrated_BI_frontend_vue/dist/
+
+# IDE
+.vscode/
+*.code-workspace
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
