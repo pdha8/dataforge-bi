@@ -1,0 +1,29 @@
+# apps/etl_engine/choices.py
+"""
+Choix pour l'application etl_engine
+"""
+from .constants import (
+    PIPELINE_TYPES,
+    PIPELINE_STATUS,
+    EXECUTION_STATUS,
+    TRANSFORMATION_TYPES,
+    ERROR_STRATEGIES,
+    PROCESSING_MODES,
+    LOG_LEVELS,
+    NOTIFICATION_TYPES,
+    ENDPOINT_TYPES,
+    TRIGGERED_BY_CHOICES,  # ← AJOUTER
+)
+
+__all__ = [
+    'PIPELINE_TYPES',
+    'PIPELINE_STATUS',
+    'EXECUTION_STATUS',
+    'TRANSFORMATION_TYPES',
+    'ERROR_STRATEGIES',
+    'PROCESSING_MODES',
+    'LOG_LEVELS',
+    'NOTIFICATION_TYPES',
+    'ENDPOINT_TYPES',
+    'TRIGGERED_BY_CHOICES',  # ← AJOUTER
+]

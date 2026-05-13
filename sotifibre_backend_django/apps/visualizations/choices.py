@@ -1,0 +1,15 @@
+# apps/visualizations/choices.py
+"""
+Choix pour l'application visualizations
+"""
+from .constants import (
+    CHART_TYPES, DASHBOARD_TYPES, REFRESH_FREQUENCIES,
+    EXPORT_FORMATS, STATUS_CHOICES, ACCESS_LEVELS,
+    THEMES, WIDGET_TYPES, KPI_TYPES, TREND_DIRECTIONS
+)
+
+__all__ = [
+    'CHART_TYPES', 'DASHBOARD_TYPES', 'REFRESH_FREQUENCIES',
+    'EXPORT_FORMATS', 'STATUS_CHOICES', 'ACCESS_LEVELS',
+    'THEMES', 'WIDGET_TYPES', 'KPI_TYPES', 'TREND_DIRECTIONS'
+]
