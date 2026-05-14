@@ -237,6 +237,8 @@ SIMPLE_JWT = {
 CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=[
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
 ])
 CORS_ALLOW_CREDENTIALS = True
 
@@ -378,8 +380,7 @@ TEST_RUNNER = 'django.test.runner.DiscoverRunner'
 TEST_NON_SERIALIZED_APPS = ['django.contrib.contenttypes', 'django.contrib.auth']
 
 # ─── Session Configuration ────────────────────────────────────────────────────
-SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
-SESSION_CACHE_ALIAS = 'default'
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 SESSION_COOKIE_AGE = 86400  # 24 heures
 SESSION_SAVE_EVERY_REQUEST = True
 

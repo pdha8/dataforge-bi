@@ -346,3 +346,21 @@ class UserActivityStatsSerializer(serializers.Serializer):
     count = serializers.IntegerField()
     by_action = serializers.DictField()
     by_severity = serializers.DictField()
+
+# ─── Custom JWT Token Serializer ─────────────────────────────────────────────
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+
+class CustomTokenObtainSerializer(TokenObtainPairSerializer):
+    """Sérialiseur personnalisé pour inclure les infos utilisateur dans la réponse JWT."""
+
+    def validate(self, attrs):
+        data = super().validate(attrs)
+        data['user'] = {
+            'id': str(self.user.id),
+            'username': self.user.username,
+            'email': self.user.email,
+            'first_name': self.user.first_name,
+            'last_name': self.user.last_name,
+            'role': getattr(self.user, 'role', ''),
+        }
+        return data

@@ -1,22 +1,42 @@
-# Python
+# ── Python ─────────────────────────────────────────────────
 __pycache__/
 *.pyc
+*.pyo
 .venv/
 *.egg-info/
+db.sqlite3
 
-# Laravel
-Integrated_BI_backend_laravel/vendor/
-Integrated_BI_backend_laravel/node_modules/
+# ── Environment (secrets) ───────────────────────────────────
+.env
+.env.*
+!.env.example
 
-# Vue.js
+# ── Django ──────────────────────────────────────────────────
+media/
+staticfiles/
+data/ml_models/*.pkl
+
+# ── Laravel (backup) ────────────────────────────────────────
+Integrated_BI_backend_laravel_backup/
+
+# ── Vue.js / Frontend (ancien) ──────────────────────────────
 Integrated_BI_frontend_vue/node_modules/
 Integrated_BI_frontend_vue/dist/
 
-# IDE
+# ── Vue.js / Frontend (nouveau - integrated-bi-frontend) ────
+integrated-bi-frontend/node_modules/
+integrated-bi-frontend/dist/
+integrated-bi-frontend/.vite/
+integrated-bi-frontend/*.local
+
+# ── IDE ─────────────────────────────────────────────────────
 .vscode/
 *.code-workspace
 .idea/
 
-# OS
+# ── OS ──────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
+
+# ── Locks (reproductibilité gérée par CI) ───────────────────
+uv.lock
