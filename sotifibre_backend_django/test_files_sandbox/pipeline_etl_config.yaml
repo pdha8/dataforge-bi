@@ -1,0 +1,106 @@
+# SOTIFibre BI Platform - Configuration Pipeline ETL
+# Pipeline : ETL_Incidents_Reseau
+# Version  : 3.2
+# Genere   : 2026-05-15
+
+pipeline:
+  name: ETL_Incidents_Reseau
+  description: >
+    Extraction des incidents reseau depuis la base PostgreSQL de production,
+    normalisation des severites, enrichissement geographique et chargement
+    dans la table de faits fact_incidents_reseau du Data Warehouse.
+  version: "3.2"
+  category: Reseau
+  priority: 1
+
+schedule:
+  enabled: true
+  cron: "0 2 * * *"
+  timezone: Europe/Paris
+  retry_on_failure: true
+  max_retries: 3
+  retry_delay_seconds: 300
+
+source:
+  name: SRC_Production_PostgreSQL
+  type: postgresql
+  host: 192.168.224.128
+  port: 5432
+  database: sotifibre_db
+  schema: public
+  table: incidents_reseau
+  username: sotifibre_readonly
+  fetch_mode: incremental
+  incremental_column: date_signalement
+  batch_size: 5000
+  connection_timeout: 30
+
+transformations:
+  - step: 1
+    name: Filtrage doublons
+    type: deduplication
+    key_columns: [id, date_signalement]
+    action: keep_latest
+
+  - step: 2
+    name: Normalisation severite
+    type: mapping
+    column: severite
+    mappings:
+      "P1": "critique"
+      "P2": "majeur"
+      "P3": "mineur"
+      "CRITIQUE": "critique"
+      "MAJEUR": "majeur"
+      "MINEUR": "mineur"
+    default: "mineur"
+
+  - step: 3
+    name: Enrichissement geographique
+    type: lookup
+    lookup_table: dim_localisation
+    join_on: zone_id
+    add_columns: [wilaya, daira, commune, region]
+
+  - step: 4
+    name: Calcul duree coupure
+    type: computed_column
+    output_column: duree_coupure_h
+    formula: "EXTRACT(EPOCH FROM (date_resolution - date_signalement)) / 3600.0"
+    condition: "statut = 'resolu' AND date_resolution IS NOT NULL"
+
+  - step: 5
+    name: Filtre qualite donnees
+    type: filter
+    conditions:
+      - column: date_signalement
+        operator: not_null
+      - column: severite
+        operator: in
+        values: [critique, majeur, mineur]
+    on_reject: log_and_skip
+
+target:
+  name: fact_incidents_reseau
+  schema: sotifibre_dw
+  type: postgresql
+  host: 192.168.224.128
+  port: 5432
+  database: supervisionolt_db
+  load_strategy: upsert
+  conflict_key: [id]
+  truncate_before_load: false
+
+notifications:
+  on_success: true
+  on_failure: true
+  recipients:
+    - admin@sotifibre.dz
+    - dev.bi@sotifibre.dz
+  channels: [email, platform]
+
+quality_checks:
+  min_rows: 1000
+  max_null_pct_critical_cols: 5
+  expected_columns: [id, type_incident, severite, date_signalement, zone_id]
+  row_count_deviation_pct: 20
