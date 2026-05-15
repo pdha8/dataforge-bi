@@ -30,11 +30,18 @@ from apps.data_sources.models import DataSource, DataTable
 from apps.data_warehouse.models import (
     DataWarehouseSchema, DataWarehouseTable,
     FactTable, DimensionTable, Measure,
+    DimensionAttribute, AggregationTable, DataWarehouseLog, DataWarehouseMetric,
 )
 from apps.etl_engine.models import ETLPipeline, ExecutionLog
 from apps.star_schema.models import DimensionalSchema
 from apps.visualizations.models import Dashboard, Widget, KPI, Report, Favorite
 from apps.notifications.models import Notification
+from apps.users.models import Role
+from apps.ml_analytics.models import MLModel, ModelTrainingLog
+from apps.star_schema.models import (
+    DimensionalSchema, DimensionHierarchy, CustomCalculation, FactRelationship
+)
+from apps.data_sources.models import DataSource, DataTable, DataSourceConnection
 
 # ---------------------------------------------------------
 # 0. NETTOYAGE - Suppression des donnees existantes
@@ -51,11 +58,43 @@ DimensionalSchema.objects.all().delete()
 Measure.objects.all().delete()
 ExecutionLog.objects.all().delete()
 ETLPipeline.objects.all().delete()
+# Disconnect post_delete signals that create log entries referencing deleted rows
+# These would cause DEFERRABLE FK violations at COMMIT time
+from django.db.models.signals import post_delete, pre_save, post_save as post_save_sig
+from apps.data_warehouse.signals import (
+    data_warehouse_table_post_delete as _dw_post_delete,
+    data_warehouse_table_post_save as _dw_post_save,
+    data_warehouse_table_pre_save as _dw_pre_save,
+)
+from apps.data_sources.signals import data_source_post_delete as _ds_post_delete
+post_delete.disconnect(_dw_post_delete, sender=DataWarehouseTable)
+post_save_sig.disconnect(_dw_post_save, sender=DataWarehouseTable)
+pre_save.disconnect(_dw_pre_save, sender=DataWarehouseTable)
+post_delete.disconnect(_ds_post_delete, sender=DataSource)
+DataWarehouseLog.objects.all().delete()
+DataWarehouseMetric.objects.all().delete()
+DimensionAttribute.objects.all().delete()
+AggregationTable.objects.all().delete()
 DataWarehouseTable.objects.all().delete()
 DataWarehouseSchema.objects.all().delete()
 DataTable.objects.all().delete()
 DataSource.objects.all().delete()
+post_delete.connect(_dw_post_delete, sender=DataWarehouseTable)
+post_save_sig.connect(_dw_post_save, sender=DataWarehouseTable)
+pre_save.connect(_dw_pre_save, sender=DataWarehouseTable)
+post_delete.connect(_ds_post_delete, sender=DataSource)
 Team.objects.all().delete()
+Role.objects.all().delete()
+try:
+    MLModel.objects.all().delete()
+    ModelTrainingLog.objects.all().delete()
+except: pass
+try:
+    FactRelationship.objects.all().delete()
+    DimensionHierarchy.objects.all().delete()
+    CustomCalculation.objects.all().delete()
+    DataSourceConnection.objects.all().delete()
+except: pass
 User.objects.filter(is_superuser=False).delete()
 User.objects.exclude(email='admin@admin.com').filter(is_superuser=True).delete()
 print("  [OK] Donnees existantes supprimees")
@@ -103,6 +142,38 @@ team_data, c = Team.objects.get_or_create(name='Equipe Data Engineering', defaul
 if c:
     team_data.members.set([dev_user, analyst_user, tech_user])
     print("  [OK] Equipe Data Engineering")
+
+
+# ---------------------------------------------------------
+# 2b. ROLES
+# ---------------------------------------------------------
+print("\n[2b/14] Roles...")
+
+roles_spec = [
+    ('superadmin',   'Administrateur Systeme',
+     'Acces complet a toutes les fonctionnalites et parametres systeme.',
+     ['admin:all', 'users:all', 'data:all', 'bi:all', 'ml:all']),
+    ('bi_developer', 'Developpeur BI',
+     'Developpement et maintenance des pipelines ETL, schemas dimensionnels et modeles ML.',
+     ['pipelines:read', 'pipelines:write', 'datasources:all', 'warehouse:all', 'ml:all']),
+    ('bi_analyst',   'Analyste BI',
+     'Creation et gestion des tableaux de bord, KPIs, rapports et analyses de donnees.',
+     ['dashboards:all', 'kpis:all', 'reports:all', 'data:read', 'ml:read']),
+    ('bi_consumer',  'Utilisateur BI',
+     'Consultation des tableaux de bord et rapports autorises. Pas de modification.',
+     ['dashboards:read', 'kpis:read', 'reports:read']),
+    ('viewer',       'Lecteur',
+     'Acces en lecture seule aux ressources partageees publiquement.',
+     ['dashboards:read']),
+]
+
+for rname, rdisplay, rdesc, rperms in roles_spec:
+    r, c = Role.objects.get_or_create(name=rname, defaults=dict(
+        display_name=rdisplay, description=rdesc, permissions=rperms,
+    ))
+    if c: print(f"  [OK] {rname} - {rdisplay}")
+
+print(f"  Total roles: {Role.objects.count()}")
 
 # ---------------------------------------------------------
 # 3. SOURCES DE DONNEES (prefixe SRC_)
@@ -596,6 +667,233 @@ schema_int.measures.add(
     measures['Cout Total Interventions'],
 )
 if c: print("  [OK] schema_interventions_techniques")
+
+
+# ---------------------------------------------------------
+# 10b. MODELES ML
+# ---------------------------------------------------------
+print("\n[10b/14] Modeles ML...")
+
+try:
+    ml_specs = [
+        dict(
+            name='ML_Prevision_Bande_Passante',
+            description='Modele de prevision de la consommation bande passante par noeud fibre pour les 30 prochains jours. Entraine sur 12 mois de donnees horaires IoT.',
+            model_type='forecast', algorithm='prophet', status='deployed', version=3,
+            dimensional_schema=schema_cons,
+            measure=measures['Data Transferee Totale'],
+            features=['date', 'noeud_id', 'debit_descendant_mbps', 'taux_utilisation_pct', 'jour_semaine', 'heure'],
+            parameters={'seasonality_mode': 'multiplicative', 'changepoint_prior_scale': 0.05, 'horizon_days': 30},
+            accuracy=94.2, rmse=12.4, mae=8.7, mape=3.8,
+            training_data_size=365000, training_duration_ms=84200,
+            last_trained=None, training_frequency='monthly',
+            is_active=True, tags=['prevision', 'bande-passante', 'prophet'],
+            owner=dev_user, team=team_data,
+        ),
+        dict(
+            name='ML_Detection_Anomalies_Reseau',
+            description='Detection en temps reel des anomalies de debit et latence sur les noeuds OLT du reseau fibre SOTIFibre. Seuil de detection : 3 sigmas.',
+            model_type='anomaly', algorithm='isolation_forest', status='deployed', version=2,
+            dimensional_schema=schema_cons,
+            measure=measures['Debit Descendant Moyen'],
+            features=['debit_descendant_mbps', 'debit_montant_mbps', 'latence_ms', 'taux_utilisation_pct'],
+            parameters={'contamination': 0.05, 'n_estimators': 200, 'max_samples': 'auto'},
+            accuracy=91.8, precision=89.4, recall=94.2, f1_score=91.7,
+            training_data_size=1240000, training_duration_ms=42800,
+            last_trained=None, training_frequency='weekly',
+            is_active=True, tags=['anomalie', 'reseau', 'isolation-forest'],
+            owner=dev_user, team=team_data,
+        ),
+        dict(
+            name='ML_Segmentation_Clients_Fibre',
+            description='Segmentation des abonnes SOTIFibre en 5 clusters selon le profil de consommation : intensite, regularite, pic horaire et zone geographique.',
+            model_type='segmentation', algorithm='kmeans', status='trained', version=1,
+            dimensional_schema=schema_cons,
+            measure=measures['Data Transferee Totale'],
+            features=['data_transferee_gb', 'debit_moyen_mbps', 'heure_pic', 'wilaya', 'type_offre'],
+            parameters={'n_clusters': 5, 'init': 'k-means++', 'max_iter': 300, 'n_init': 10},
+            accuracy=88.6,
+            training_data_size=42380, training_duration_ms=18900,
+            last_trained=None, training_frequency='monthly',
+            is_active=True, tags=['segmentation', 'clients', 'kmeans'],
+            owner=analyst_user, team=team_bi,
+        ),
+        dict(
+            name='ML_Classification_Incidents_Reseau',
+            description='Classification automatique des incidents reseau par type (coupure, degradation, securite) et severite pour priorisation des interventions.',
+            model_type='classification', algorithm='random_forest', status='deployed', version=4,
+            dimensional_schema=schema_inc,
+            measure=measures['Nombre Incidents'],
+            features=['type_equipement', 'zone_id', 'heure', 'jour_semaine', 'duree_precedente', 'nb_clients_zone'],
+            parameters={'n_estimators': 150, 'max_depth': 12, 'min_samples_split': 5, 'class_weight': 'balanced'},
+            accuracy=93.7, precision=92.1, recall=94.8, f1_score=93.4, roc_auc=0.971,
+            training_data_size=28640, training_duration_ms=31500,
+            last_trained=None, training_frequency='monthly',
+            is_active=True, tags=['classification', 'incidents', 'random-forest'],
+            owner=dev_user, team=team_data,
+        ),
+        dict(
+            name='ML_Regression_Cout_Interventions',
+            description='Modele de regression estimant le cout et la duree des interventions terrain avant dispatch technicien, optimisant la planification des equipes.',
+            model_type='regression', algorithm='gradient_boosting', status='trained', version=2,
+            dimensional_schema=schema_int,
+            measure=measures['Cout Total Interventions'],
+            features=['type_intervention', 'zone_id', 'type_equipement', 'technicien_experience', 'heure'],
+            parameters={'n_estimators': 200, 'learning_rate': 0.05, 'max_depth': 5, 'subsample': 0.8},
+            accuracy=87.3, rmse=1240.5, mae=890.2, mape=8.4,
+            training_data_size=18720, training_duration_ms=22100,
+            last_trained=None, training_frequency='quarterly',
+            is_active=True, tags=['regression', 'interventions', 'gradient-boosting'],
+            owner=analyst_user, team=team_bi,
+        ),
+    ]
+
+    from django.utils import timezone
+    from datetime import timedelta
+
+    ml_models = {}
+    mcount = 0
+    for mspec in ml_specs:
+        name = mspec['name']
+        mspec['last_trained'] = timezone.now() - timedelta(days=7)
+        m, c = MLModel.objects.get_or_create(name=name, defaults=mspec)
+        ml_models[name] = m
+        if c:
+            print(f"  [OK] {name}")
+            mcount += 1
+
+    print(f"  Total modeles ML: {mcount} crees")
+
+    # Training logs for each model
+    tl_count = 0
+    for mname, m in ml_models.items():
+        if not ModelTrainingLog.objects.filter(model=m).exists():
+            for i in range(3):
+                started = timezone.now() - timedelta(days=7 + i * 30)
+                dur = m.training_duration_ms or 30000
+                ModelTrainingLog.objects.create(
+                    model=m,
+                    status='success' if i > 0 else 'success',
+                    started_at=started,
+                    completed_at=started + timedelta(milliseconds=dur),
+                    duration_ms=dur,
+                    accuracy=m.accuracy,
+                    data_size=m.training_data_size or 10000,
+                )
+                tl_count += 1
+    print(f"  [OK] {tl_count} logs d entrainement crees")
+
+except Exception as e:
+    import traceback
+    print(f"  [WARN] MLModels: {e}")
+    traceback.print_exc()
+
+# ---------------------------------------------------------
+# 10c. SCHEMAS ETOILE - HIERARCHIES ET CALCULS
+# ---------------------------------------------------------
+print("\n[10c/14] Hierarchies et calculs dimensionnels...")
+
+try:
+    hier_specs = [
+        (schema_inc, 'Hierarchie Temporelle Incidents',
+         'Hierarchie temps : Annee > Trimestre > Mois > Semaine > Jour',
+         ['annee', 'trimestre', 'mois', 'semaine', 'jour'], dim_temps_tbl),
+        (schema_inc, 'Hierarchie Geographique Algerie',
+         'Hierarchie geographique : Region > Wilaya > Daira > Commune',
+         ['region', 'wilaya', 'daira', 'commune'], dim_loc_tbl),
+        (schema_cons, 'Hierarchie Temporelle Performance',
+         'Hierarchie pour analyse performance : Annee > Mois > Semaine > Jour > Heure',
+         ['annee', 'mois', 'semaine', 'jour', 'heure'], dim_temps_tbl),
+        (schema_int, 'Hierarchie Equipements Reseau',
+         'Hierarchie reseau : Region > Zone > Noeud > Equipement',
+         ['region', 'zone_reseau', 'noeud', 'equipement'], dim_equip_tbl),
+    ]
+
+    hcount = 0
+    for schema, hname, hdesc, hlevels, dim_tbl in hier_specs:
+        h, c = DimensionHierarchy.objects.get_or_create(
+            dimension_table=dim_tbl, name=hname,
+            defaults=dict(description=hdesc, levels=hlevels, is_active=True),
+        )
+        if c:
+            print(f"  [OK] {hname}")
+            hcount += 1
+
+    calc_specs = [
+        (schema_inc, 'Taux Indisponibilite Reseau',
+         'Calcul du taux d indisponibilite reseau en complement du taux de resolution.',
+         '(1 - taux_resolution_pct / 100) * 100', '%', 2),
+        (schema_cons, 'Bande Passante Residuelle',
+         'Capacite bande passante non utilisee calculee depuis le taux d utilisation.',
+         '(1 - taux_utilisation_pct / 100) * capacite_totale_mbps', 'Mbps', 1),
+        (schema_cons, 'Ratio Montant Descendant',
+         'Rapport entre le debit montant et descendant - indicateur d equilibre du trafic.',
+         'debit_montant_mbps / NULLIF(debit_descendant_mbps, 0)', 'Ratio', 3),
+        (schema_int, 'Cout Moyen par Heure Intervention',
+         'Cout horaire des interventions terrain pour optimisation allocation ressources.',
+         'cout_total_da / NULLIF(duree_intervention_h, 0)', 'DA/h', 0),
+    ]
+
+    ccount = 0
+    for schema, cname, cdesc, cformula, cunit, cdec in calc_specs:
+        result_col = cname.lower().replace(' ', '_').replace('/', '_')[:200]
+        c_obj, c = CustomCalculation.objects.get_or_create(
+            dimensional_schema=schema, name=cname,
+            defaults=dict(description=cdesc, formula=cformula,
+                          result_column=result_col, unit=cunit,
+                          decimal_places=cdec, is_active=True),
+        )
+        if c:
+            print(f"  [OK] Calcul: {cname}")
+            ccount += 1
+
+    print(f"  [OK] {hcount} hierarchies + {ccount} calculs crees")
+
+except Exception as e:
+    import traceback
+    print(f"  [WARN] Hierarchies/Calculs: {e}")
+    traceback.print_exc()
+
+# ---------------------------------------------------------
+# 10d. CONNEXIONS DB
+# ---------------------------------------------------------
+print("\n[10d/14] Connexions DB...")
+try:
+    conn_specs = [
+        dict(name='CONN_Production_PostgreSQL',
+             description='Connexion directe a la base PostgreSQL de production SOTIFibre.',
+             connection_type='postgresql',
+             host='192.168.224.128', port=5432, database='sotifibre_db',
+             username='sotifibre_readonly', password='readonly_2026!',
+             is_active=True, last_tested=None,
+             owner=dev_user, tags=['production', 'postgresql']),
+        dict(name='CONN_DW_PostgreSQL',
+             description='Connexion a l entrepot de donnees - schema sotifibre_dw.',
+             connection_type='postgresql',
+             host='192.168.224.128', port=5432, database='supervisionolt_db',
+             username='supervisionolt_admin', password='dw_2026!',
+             is_active=True, last_tested=None,
+             owner=dev_user, tags=['datawarehouse', 'postgresql']),
+    ]
+    conn_count = 0
+    import django.utils.timezone as tz2
+    conn_count = 0
+    for src, h, p, dbn, sch, usr in [
+        (src_pg,    '192.168.224.128', 5432, 'sotifibre_db', 'public', 'sotifibre_readonly'),
+    ]:
+        c_obj, c = DataSourceConnection.objects.get_or_create(
+            data_source=src,
+            defaults=dict(host=h, port=p, database_name=dbn, schema_name=sch,
+                          username=usr, password='', use_ssl=False,
+                          is_connected=True, last_connected=tz2.now(), latency_ms=8,
+                          connection_test_result={'status': 'ok', 'message': 'Connexion etablie'}),
+        )
+        if c:
+            print(f'  [OK] Connexion {src.name}')
+            conn_count += 1
+    print(f'  Total connexions: {conn_count}')
+except Exception as e:
+    print(f"  [WARN] Connexions: {e}")
 
 # ---------------------------------------------------------
 # 11. TABLEAUX DE BORD (prefixe DSB_)
