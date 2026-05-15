@@ -7,6 +7,7 @@ import {
   LayoutDashboard, Database, GitBranch, ServerCog,
   BarChart2, LayoutGrid, TrendingUp, ShieldCheck,
   ChevronLeft, LogOut, Bell, FileText, Activity, Star,
+  Brain, Code2, FileCode, UserCircle, Bookmark, FolderOpen, Plug,
 } from 'lucide-vue-next'
 
 const { collapsed, toggle } = useSidebar()
@@ -43,18 +44,25 @@ const navGroups: NavGroup[] = [
   {
     heading: 'Données',
     items: [
-      { icon: Database,   label: 'Sources',         to: '/sources' },
-      { icon: GitBranch,  label: 'Pipelines ETL',   to: '/pipelines' },
-      { icon: Activity,   label: 'Exécutions ETL',  to: '/executions' },
-      { icon: ServerCog,  label: 'Data Warehouse',  to: '/warehouse' },
-      { icon: Star,       label: 'Schémas étoile',  to: '/star-schema' },
+      { icon: Database,    label: 'Sources',              to: '/sources' },
+      { icon: Plug,        label: 'Connexions DB',        to: '/sources/connections' },
+      { icon: FolderOpen,  label: 'Fichiers',             to: '/sources/files' },
+      { icon: Activity,    label: 'Monitoring Sources',   to: '/sources/monitoring' },
+      { icon: Code2,       label: 'Power Queries',        to: '/power-queries' },
+      { icon: FileCode,    label: 'Requêtes',             to: '/queries' },
+      { icon: GitBranch,   label: 'Pipelines ETL',        to: '/pipelines' },
+      { icon: Activity,    label: 'Exécutions ETL',       to: '/executions' },
+      { icon: ServerCog,   label: 'Data Warehouse',       to: '/warehouse' },
+      { icon: Star,        label: 'Schémas étoile',       to: '/star-schema' },
+      { icon: Brain,       label: 'ML Analytics',         to: '/ml-analytics' },
     ],
   },
   {
     heading: 'Système',
     items: [
-      { icon: Bell,        label: 'Notifications',  to: '/notifications' },
-      { icon: ShieldCheck, label: 'Administration', to: '/admin' },
+      { icon: Bookmark,    label: 'Favoris',              to: '/favorites' },
+      { icon: Bell,        label: 'Notifications',        to: '/notifications' },
+      { icon: ShieldCheck, label: 'Administration',       to: '/admin' },
     ],
   },
 ]
@@ -116,18 +124,22 @@ const userName = computed(() => {
       </template>
     </nav>
 
-    <!-- ── Spacer ─────────────────────────────────────────── -->
-    <div class="sidebar-spacer"></div>
-
     <!-- ── User profile ───────────────────────────────────── -->
     <div class="sidebar-user">
-      <div class="user-avatar" :title="userName">{{ userInitials }}</div>
+      <RouterLink to="/profile" class="user-avatar" :title="`${userName} — Mon profil`">{{ userInitials }}</RouterLink>
       <div class="sidebar-label user-info">
-        <span class="user-name">{{ userName }}</span>
-        <button class="user-logout" @click="auth.logout()" title="Déconnexion">
-          <LogOut :size="14" />
-          <span>Déconnexion</span>
-        </button>
+        <RouterLink to="/profile" class="user-name user-name-link">{{ userName }}</RouterLink>
+        <div class="user-actions">
+          <RouterLink to="/profile" class="user-action-link" title="Mon profil">
+            <UserCircle :size="13" />
+            <span>Profil</span>
+          </RouterLink>
+          <span class="user-actions-sep">·</span>
+          <button class="user-logout" @click="auth.logout()" title="Déconnexion">
+            <LogOut :size="13" />
+            <span>Déconnexion</span>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -148,15 +160,15 @@ const userName = computed(() => {
 <style scoped>
 /* ── Sidebar shell ───────────────────────────────────────── */
 .sidebar {
-  position: relative;
+  position: sticky;
+  top: 0;
   display: flex;
   flex-direction: column;
   background-color: var(--surface-raised);
   height: 100dvh;
-  overflow: hidden;
-  /* Sticky so it stays in view while main scrolls */
-  position: sticky;
-  top: 0;
+  /* overflow visible so the collapse button (right:-12px) isn't clipped;
+     sidebar-nav and sidebar-label handle their own overflow */
+  overflow: visible;
 }
 
 /* Subtle right border */
@@ -312,9 +324,6 @@ const userName = computed(() => {
   box-shadow: 0 4px 16px oklch(0% 0 0 / 0.4);
 }
 
-/* ── Spacer ──────────────────────────────────────────────── */
-.sidebar-spacer { flex: 1; }
-
 /* ── User profile ────────────────────────────────────────── */
 .sidebar-user {
   display: flex;
@@ -338,6 +347,12 @@ const userName = computed(() => {
   justify-content: center;
   flex-shrink: 0;
   letter-spacing: 0.03em;
+  text-decoration: none;
+  transition: box-shadow 150ms ease;
+}
+
+.user-avatar:hover {
+  box-shadow: 0 0 0 2px var(--accent);
 }
 
 .user-info {
@@ -356,6 +371,34 @@ const userName = computed(() => {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+.user-name-link { text-decoration: none; }
+.user-name-link:hover { color: var(--accent); }
+
+.user-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+}
+
+.user-actions-sep {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  opacity: 0.5;
+}
+
+.user-action-link {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  font-family: var(--font-ui);
+  text-decoration: none;
+  transition: color 150ms ease;
+}
+
+.user-action-link:hover { color: var(--accent); }
 
 .user-logout {
   display: flex;

@@ -4,8 +4,22 @@ Users Serializers for Sotifibre BI Platform
 """
 from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from apps.core.utils import get_client_ip
 from .models import User, Team, Role, Permission, UserActivity
+
+
+class CustomTokenObtainSerializer(TokenObtainPairSerializer):
+    """JWT token serializer using email as identifier"""
+    username_field = User.USERNAME_FIELD
+
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+        token['email'] = user.email
+        token['role'] = user.role
+        token['full_name'] = user.get_full_name()
+        return token
 
 
 class UserMinimalSerializer(serializers.ModelSerializer):
@@ -73,11 +87,11 @@ class RoleSerializer(serializers.ModelSerializer):
     """Sérialiseur pour Role"""
     permissions_details = serializers.SerializerMethodField()
     permissions_count = serializers.SerializerMethodField()
-    
+
     class Meta:
         model = Role
         fields = [
-            'id', 'name', 'description', 'permissions',
+            'id', 'name', 'display_name', 'description', 'permissions',
             'permissions_count', 'permissions_details', 'created_at', 'updated_at'
         ]
         read_only_fields = ['created_at', 'updated_at']
@@ -125,16 +139,19 @@ class UserListSerializer(serializers.ModelSerializer):
     is_admin = serializers.BooleanField(read_only=True)
     role_icon = serializers.SerializerMethodField()
     status_badge = serializers.SerializerMethodField()
-    
+    name = serializers.SerializerMethodField()
+    initials = serializers.SerializerMethodField()
+
     # Sotifibre specific permissions
     can_manage_data_sources = serializers.BooleanField(read_only=True)
     can_manage_dashboards = serializers.BooleanField(read_only=True)
     can_manage_kpis = serializers.BooleanField(read_only=True)
-    
+
     class Meta:
         model = User
         fields = [
             'id', 'username', 'email', 'first_name', 'last_name',
+            'name', 'initials',
             'role', 'role_display', 'role_icon',
             'status', 'status_display', 'status_badge',
             'department', 'job_title', 'is_active', 'is_admin',
@@ -142,7 +159,19 @@ class UserListSerializer(serializers.ModelSerializer):
             'last_login', 'last_activity_at', 'created_at'
         ]
         read_only_fields = ['last_login', 'last_activity_at', 'created_at']
-    
+
+    def get_name(self, obj):
+        return obj.get_full_name()
+
+    def get_initials(self, obj):
+        full_name = obj.get_full_name()
+        parts = full_name.split()
+        if len(parts) >= 2:
+            return (parts[0][0] + parts[-1][0]).upper()
+        if parts:
+            return parts[0][:2].upper()
+        return (obj.username[:2] if obj.username else 'U?').upper()
+
     def get_role_icon(self, obj):
         icons = {
             'superadmin': '👑',
@@ -281,7 +310,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         fields = [
             'first_name', 'last_name', 'role', 'department',
             'job_title', 'phone', 'avatar', 'timezone', 'language', 'theme',
-            'status', 'api_access_enabled', 'api_rate_limit'
+            'status', 'api_access_enabled', 'api_rate_limit', 'two_factor_enabled'
         ]
     
     def validate_role(self, value):
@@ -346,21 +375,3 @@ class UserActivityStatsSerializer(serializers.Serializer):
     count = serializers.IntegerField()
     by_action = serializers.DictField()
     by_severity = serializers.DictField()
-
-# ─── Custom JWT Token Serializer ─────────────────────────────────────────────
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-
-class CustomTokenObtainSerializer(TokenObtainPairSerializer):
-    """Sérialiseur personnalisé pour inclure les infos utilisateur dans la réponse JWT."""
-
-    def validate(self, attrs):
-        data = super().validate(attrs)
-        data['user'] = {
-            'id': str(self.user.id),
-            'username': self.user.username,
-            'email': self.user.email,
-            'first_name': self.user.first_name,
-            'last_name': self.user.last_name,
-            'role': getattr(self.user, 'role', ''),
-        }
-        return data

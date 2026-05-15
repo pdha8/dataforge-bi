@@ -75,9 +75,49 @@ const router = createRouter({
           component: () => import('@/views/star-schema/StarSchemaView.vue'),
         },
         {
+          path: 'ml-analytics',
+          name: 'ml-analytics',
+          component: () => import('@/views/ml-analytics/MlAnalyticsView.vue'),
+        },
+        {
+          path: 'power-queries',
+          name: 'power-queries',
+          component: () => import('@/views/sources/PowerQueriesView.vue'),
+        },
+        {
+          path: 'queries',
+          name: 'queries',
+          component: () => import('@/views/sources/QueriesView.vue'),
+        },
+        {
+          path: 'sources/monitoring',
+          name: 'source-monitoring',
+          component: () => import('@/views/sources/SourceMonitoringView.vue'),
+        },
+        {
+          path: 'sources/files',
+          name: 'source-files',
+          component: () => import('@/views/sources/FilesView.vue'),
+        },
+        {
+          path: 'sources/connections',
+          name: 'source-connections',
+          component: () => import('@/views/sources/ConnectionsView.vue'),
+        },
+        {
+          path: 'favorites',
+          name: 'favorites',
+          component: () => import('@/views/favorites/FavoritesView.vue'),
+        },
+        {
           path: 'admin',
           name: 'admin',
           component: () => import('@/views/admin/AdminView.vue'),
+        },
+        {
+          path: 'profile',
+          name: 'profile',
+          component: () => import('@/views/profile/ProfileView.vue'),
         },
       ],
     },

@@ -120,7 +120,73 @@ const form = ref({
   description: '',
   status: 'draft',
   templateId: 'hero3',
+  tags: '',
+  refresh_frequency: 'manual',
+  auto_refresh: false,
+  access_level: 'private',
+  allow_export: true,
 })
+
+// ── Main tab ───────────────────────────────────────────────
+const dashTab = ref<'dashboards' | 'widgets'>('dashboards')
+
+// ── Widget state ───────────────────────────────────────────
+interface Widget {
+  id: string
+  name: string
+  description?: string
+  widget_type: string
+  dashboard?: string
+  is_enabled: boolean
+  order: number
+  render_count: number
+  avg_render_time_ms?: number | null
+  last_rendered?: string | null
+  created_at?: string
+}
+
+const widgets           = ref<Widget[]>([])
+const widgetsLoading    = ref(false)
+const wSearchQuery      = ref('')
+const wTypeFilter       = ref('all')
+const wDeleteConfirm    = ref<string | null>(null)
+
+async function fetchWidgets() {
+  if (widgetsLoading.value) return
+  widgetsLoading.value = true
+  try {
+    const { data } = await api.get('/api/visualizations/widgets/')
+    widgets.value = Array.isArray(data?.results) ? data.results : Array.isArray(data) ? data : []
+  } catch {
+    widgets.value = []
+  } finally {
+    widgetsLoading.value = false
+  }
+}
+
+async function deleteWidget(id: string) {
+  try {
+    await api.delete(`/api/visualizations/widgets/${id}/`)
+    widgets.value = widgets.value.filter(w => w.id !== id)
+  } catch { /* ignore */ }
+  wDeleteConfirm.value = null
+}
+
+const filteredWidgets = computed(() => {
+  let list = widgets.value
+  const q = wSearchQuery.value.toLowerCase()
+  if (q) list = list.filter(w => w.name.toLowerCase().includes(q) || w.widget_type.toLowerCase().includes(q))
+  if (wTypeFilter.value !== 'all') list = list.filter(w => w.widget_type === wTypeFilter.value)
+  return list
+})
+
+const uniqueWidgetTypes = computed(() => [...new Set(widgets.value.map(w => w.widget_type))].sort())
+
+const widgetStats = computed(() => ({
+  total:    widgets.value.length,
+  enabled:  widgets.value.filter(w => w.is_enabled).length,
+  disabled: widgets.value.filter(w => !w.is_enabled).length,
+}))
 
 // ── Publish / Export state ─────────────────────────────────
 const publishingId   = ref<string | number | null>(null)
@@ -228,13 +294,22 @@ async function deleteDash(id: string | number) {
 
 function openDrawer() {
   editDash.value = null
-  form.value = { name: '', description: '', status: 'draft', templateId: 'hero3' }
+  form.value = {
+    name: '', description: '', status: 'draft', templateId: 'hero3',
+    tags: '', refresh_frequency: 'manual', auto_refresh: false,
+    access_level: 'private', allow_export: true,
+  }
   drawerOpen.value = true
 }
 
 function openEdit(d: Dashboard) {
   editDash.value = d
-  form.value = { name: d.name, description: d.description || '', status: d.status, templateId: 'hero3' }
+  form.value = {
+    name: d.name, description: d.description || '', status: d.status, templateId: 'hero3',
+    tags: d.tags.join(', '),
+    refresh_frequency: 'manual', auto_refresh: false,
+    access_level: 'private', allow_export: true,
+  }
   drawerOpen.value = true
 }
 
@@ -259,10 +334,15 @@ async function submitForm() {
   if (!form.value.name.trim()) return
   submitting.value = true
   try {
-    const payload = {
-      name:        form.value.name.trim(),
-      description: form.value.description || '',
-      status:      form.value.status,
+    const payload: Record<string, any> = {
+      name:              form.value.name.trim(),
+      description:       form.value.description || '',
+      status:            form.value.status,
+      tags:              form.value.tags ? form.value.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
+      refresh_frequency: form.value.refresh_frequency,
+      auto_refresh:      form.value.auto_refresh,
+      access_level:      form.value.access_level,
+      allow_export:      form.value.allow_export,
     }
     if (editDash.value) {
       const { data } = await api.patch(`/api/visualizations/dashboards/${editDash.value.id}/`, payload)
@@ -317,6 +397,29 @@ onMounted(fetchDashboards)
         <span>Nouveau tableau</span>
       </button>
     </header>
+
+    <!-- ── Main tab nav ──────────────────────────────────── -->
+    <nav class="main-tab-nav">
+      <button
+        class="main-tab-btn"
+        :class="{ 'main-tab-btn--active': dashTab === 'dashboards' }"
+        @click="dashTab = 'dashboards'"
+      >
+        <LayoutDashboard :size="14" />
+        Tableaux de bord
+      </button>
+      <button
+        class="main-tab-btn"
+        :class="{ 'main-tab-btn--active': dashTab === 'widgets' }"
+        @click="dashTab = 'widgets'; fetchWidgets()"
+      >
+        <Grid3x3 :size="14" />
+        Widgets
+        <span v-if="widgets.length" class="tab-chip">{{ widgets.length }}</span>
+      </button>
+    </nav>
+
+    <template v-if="dashTab === 'dashboards'">
 
     <!-- ── Stats strip ─────────────────────────────────────── -->
     <section class="stats-strip" aria-label="Statistiques">
@@ -747,6 +850,52 @@ onMounted(fetchDashboards)
               </div>
             </div>
 
+            <!-- Tags -->
+            <div class="form-field">
+              <label class="form-label">Tags <span class="opt">séparés par virgule</span></label>
+              <input v-model="form.tags" class="form-input" type="text" placeholder="finance, direction, Q3…" />
+            </div>
+
+            <!-- Refresh + Access row -->
+            <div class="db-form-row">
+              <div class="form-field">
+                <label class="form-label">Fréquence de rafraîchissement</label>
+                <div class="select-wrap w100">
+                  <select v-model="form.refresh_frequency" class="form-select w100">
+                    <option value="manual">Manuel</option>
+                    <option value="5min">5 minutes</option>
+                    <option value="15min">15 minutes</option>
+                    <option value="hourly">Horaire</option>
+                    <option value="daily">Quotidien</option>
+                  </select>
+                  <ChevronDown :size="13" class="select-arrow" />
+                </div>
+              </div>
+              <div class="form-field">
+                <label class="form-label">Niveau d'accès</label>
+                <div class="select-wrap w100">
+                  <select v-model="form.access_level" class="form-select w100">
+                    <option value="private">Privé</option>
+                    <option value="team">Équipe</option>
+                    <option value="public">Public</option>
+                  </select>
+                  <ChevronDown :size="13" class="select-arrow" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Toggles -->
+            <div class="db-toggles">
+              <label class="db-toggle-label">
+                <input v-model="form.auto_refresh" type="checkbox" class="db-checkbox" />
+                <span>Rafraîchissement automatique</span>
+              </label>
+              <label class="db-toggle-label">
+                <input v-model="form.allow_export" type="checkbox" class="db-checkbox" />
+                <span>Autoriser l'export</span>
+              </label>
+            </div>
+
             <!-- Layout template -->
             <div class="form-field">
               <label class="form-label">Modèle de disposition</label>
@@ -792,6 +941,107 @@ onMounted(fetchDashboards)
         </aside>
       </div>
     </Transition>
+
+    </template>
+
+    <!-- ════════════════════════════════════════════════════ -->
+    <!-- TAB: WIDGETS                                         -->
+    <!-- ════════════════════════════════════════════════════ -->
+    <template v-else-if="dashTab === 'widgets'">
+
+      <!-- Stats strip -->
+      <section class="stats-strip">
+        <div class="stat-item">
+          <Grid3x3 :size="15" class="stat-icon" />
+          <span class="stat-val">{{ widgetStats.total }}</span>
+          <span class="stat-lbl">Total</span>
+        </div>
+        <div class="stat-sep"></div>
+        <div class="stat-item">
+          <span class="stat-val stat-val--pub">{{ widgetStats.enabled }}</span>
+          <span class="stat-lbl">Actifs</span>
+        </div>
+        <div class="stat-sep"></div>
+        <div class="stat-item">
+          <span class="stat-val stat-val--draft">{{ widgetStats.disabled }}</span>
+          <span class="stat-lbl">Désactivés</span>
+        </div>
+      </section>
+
+      <!-- Toolbar -->
+      <div class="toolbar">
+        <div class="search-wrap">
+          <Search :size="14" class="search-icon" />
+          <input
+            v-model="wSearchQuery"
+            class="search-input"
+            type="search"
+            placeholder="Rechercher un widget…"
+          />
+        </div>
+        <div class="select-wrap">
+          <select v-model="wTypeFilter" class="filter-select">
+            <option value="all">Tous les types</option>
+            <option v-for="t in uniqueWidgetTypes" :key="t" :value="t">{{ t }}</option>
+          </select>
+          <ChevronDown :size="13" class="select-arrow" />
+        </div>
+        <button class="btn-secondary" @click="fetchWidgets">
+          <Download :size="13" />
+          Actualiser
+        </button>
+      </div>
+
+      <!-- Loading -->
+      <div v-if="widgetsLoading" class="widget-list">
+        <div v-for="i in 6" :key="i" class="widget-skel"></div>
+      </div>
+
+      <!-- Empty -->
+      <div v-else-if="filteredWidgets.length === 0" class="empty-state">
+        <Grid3x3 :size="36" class="empty-icon" />
+        <p class="empty-title">Aucun widget trouvé</p>
+        <p class="empty-sub">Les widgets sont créés depuis les tableaux de bord.</p>
+      </div>
+
+      <!-- Widget list -->
+      <div v-else class="widget-list">
+        <div
+          v-for="(w, i) in filteredWidgets"
+          :key="w.id"
+          class="widget-row"
+          :style="{ '--wi': i }"
+        >
+          <div class="widget-row-icon">
+            <Grid3x3 :size="14" />
+          </div>
+          <div class="widget-row-info">
+            <p class="widget-row-name">{{ w.name }}</p>
+            <p class="widget-row-type">{{ w.widget_type }}</p>
+          </div>
+          <div class="widget-row-meta">
+            <span class="wm-item">{{ w.render_count }} renders</span>
+            <span v-if="w.avg_render_time_ms" class="wm-item">{{ w.avg_render_time_ms.toFixed(0) }}ms</span>
+            <span :class="w.is_enabled ? 'status-badge-sm status--pub' : 'status-badge-sm status--draft'">
+              {{ w.is_enabled ? 'Actif' : 'Inactif' }}
+            </span>
+          </div>
+          <div class="widget-row-actions" @click.stop>
+            <template v-if="wDeleteConfirm === w.id">
+              <span class="del-label">Supprimer ?</span>
+              <button class="action-btn-sm action-btn-sm--yes" @click="deleteWidget(w.id)">Oui</button>
+              <button class="action-btn-sm action-btn-sm--no" @click="wDeleteConfirm = null">Non</button>
+            </template>
+            <template v-else>
+              <button class="action-btn-sm action-btn-sm--del" title="Supprimer" @click="wDeleteConfirm = w.id">
+                <Trash2 :size="13" />
+              </button>
+            </template>
+          </div>
+        </div>
+      </div>
+
+    </template>
 
   </div>
 </template>
@@ -1313,6 +1563,22 @@ onMounted(fetchDashboards)
 
 .form-textarea { height: auto; padding: var(--sp-3) var(--sp-4); resize: none; line-height: 1.55; }
 
+/* ── Dashboard form extras ───────────────────────────────── */
+.db-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
+.form-select {
+  appearance: none; height: 40px; padding: 0 30px 0 var(--sp-3);
+  background: var(--surface-overlay); border: 1px solid var(--border-default);
+  border-radius: var(--radius-md); color: var(--text-primary);
+  font-family: var(--font-ui); font-size: var(--text-sm); outline: none; cursor: pointer;
+  transition: border-color 150ms;
+}
+.form-select:focus { border-color: var(--accent-dim); }
+.form-select option { background: var(--surface-raised); }
+.w100 { width: 100%; }
+.db-toggles { display: flex; flex-direction: column; gap: var(--sp-2); }
+.db-toggle-label { display: flex; align-items: center; gap: var(--sp-2); font-size: var(--text-sm); color: var(--text-secondary); cursor: pointer; }
+.db-checkbox { accent-color: var(--accent); width: 14px; height: 14px; cursor: pointer; }
+
 /* Status toggle */
 .status-toggle {
   display: flex; gap: var(--sp-2);
@@ -1505,4 +1771,178 @@ onMounted(fetchDashboards)
   .dash-card, .list-row { animation: none; opacity: 1; transform: none; }
   .card-skel { animation: none; }
 }
+
+/* ── Secondary button ─────────────────────────────────────── */
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-4);
+  background: none;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  min-height: 38px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 150ms, color 150ms, background 150ms;
+}
+.btn-secondary:hover { border-color: var(--border-strong); color: var(--text-primary); background: var(--surface-overlay); }
+
+/* ── Main tab nav ─────────────────────────────────────────── */
+.main-tab-nav {
+  display: flex;
+  gap: 2px;
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.main-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-4);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  color: var(--text-muted);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 150ms, border-color 150ms;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+}
+.main-tab-btn:hover { color: var(--text-secondary); background: var(--surface-overlay); }
+.main-tab-btn--active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+  background: none;
+}
+
+.tab-chip {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+  background: var(--accent-surface);
+  color: var(--accent);
+}
+
+/* ── Widget list ──────────────────────────────────────────── */
+.widget-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.widget-skel {
+  height: 58px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(90deg, var(--surface-overlay) 25%, var(--surface-muted) 50%, var(--surface-overlay) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+}
+
+.widget-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  transition: background 100ms, border-color 100ms;
+  animation: row-in 250ms both;
+  animation-delay: calc(var(--wi, 0) * 30ms);
+}
+.widget-row:hover { background: var(--surface-overlay); border-color: var(--border-default); }
+
+@keyframes row-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.widget-row-icon {
+  width: 32px; height: 32px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-surface);
+  color: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+.widget-row-info { flex: 1; min-width: 0; }
+.widget-row-name {
+  font-family: var(--font-display);
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.widget-row-type {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+.widget-row-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  flex-shrink: 0;
+}
+
+.wm-item {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.status-badge-sm {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+}
+.status--pub  { background: oklch(11% 0.04 148); color: oklch(65% 0.15 148); }
+.status--draft { background: oklch(12% 0.04 258); color: oklch(60% 0.12 258); }
+
+.widget-row-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  flex-shrink: 0;
+}
+
+.action-btn-sm {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 100ms, color 100ms;
+}
+.action-btn-sm:hover { background: var(--surface-overlay); }
+.action-btn-sm--del:hover { color: var(--error); border-color: var(--error); }
+.action-btn-sm--yes { color: var(--error); border-color: oklch(30% 0.10 0); }
+.action-btn-sm--yes:hover { background: oklch(14% 0.05 0); }
+.action-btn-sm--no { color: var(--text-secondary); }
+
+.del-label { font-size: var(--text-xs); color: var(--text-muted); font-weight: 500; }
 </style>

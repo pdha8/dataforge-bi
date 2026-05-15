@@ -71,8 +71,17 @@ interface PaginatedResponse<T> {
   previous: string | null
 }
 
+interface Subscription {
+  id: string
+  notification_type: string
+  notification_type_display: string
+  is_enabled: boolean
+  preferred_channels: string[]
+  filters: Record<string, unknown>
+}
+
 // ── Tabs ────────────────────────────────────────────────────
-type Tab = 'notifications' | 'alerts' | 'channels'
+type Tab = 'notifications' | 'alerts' | 'channels' | 'subscriptions'
 const activeTab = ref<Tab>('notifications')
 
 // ── Notification state ───────────────────────────────────────
@@ -115,6 +124,12 @@ const alertForm = ref({
 // ── Channels state ───────────────────────────────────────────
 const channels        = ref<Channel[]>([])
 const channelsLoading = ref(true)
+
+// ── Subscriptions state ───────────────────────────────────────
+const subscriptions   = ref<Subscription[]>([])
+const subsLoading     = ref(true)
+const subsSubmitting  = ref<string | null>(null)
+const editSub         = ref<string | null>(null)
 
 // ── Helpers ──────────────────────────────────────────────────
 const isRead = (n: Notification) => n.status === 'read' || n.read_at !== null
@@ -374,6 +389,67 @@ async function submitAlertForm() {
   }
 }
 
+// ── Subscriptions constants ───────────────────────────────────
+const AVAILABLE_CHANNELS = [
+  { key: 'email',   label: 'Email',   icon: Mail },
+  { key: 'sms',     label: 'SMS',     icon: MessageSquare },
+  { key: 'webhook', label: 'Webhook', icon: Globe },
+  { key: 'in_app',  label: 'In-App',  icon: Bell },
+] as const
+
+const SUB_TYPE_LABELS: Record<string, string> = {
+  kpi_alert:         'Alerte KPI',
+  kpi_target_reached:'KPI objectif atteint',
+  pipeline_complete: 'Pipeline terminé',
+  pipeline_failed:   'Pipeline échoué',
+  pipeline_started:  'Pipeline démarré',
+  report_ready:      'Rapport prêt',
+  dashboard_shared:  'Dashboard partagé',
+  anomaly_detected:  'Anomalie détectée',
+  system_alert:      'Alerte système',
+  user_welcome:      'Bienvenue',
+  weekly_digest:     'Résumé hebdomadaire',
+}
+
+// ── Subscriptions API ─────────────────────────────────────────
+async function fetchSubscriptions() {
+  subsLoading.value = true
+  try {
+    const res = await api.get<Subscription[] | PaginatedResponse<Subscription>>('/api/notifications/subscriptions/')
+    subscriptions.value = Array.isArray(res.data) ? res.data : (res.data.results ?? [])
+  } catch {
+    subscriptions.value = []
+  } finally {
+    subsLoading.value = false
+  }
+}
+
+async function toggleSubscription(sub: Subscription) {
+  subsSubmitting.value = sub.id
+  try {
+    await api.patch(`/api/notifications/subscriptions/${sub.id}/`, { is_enabled: !sub.is_enabled })
+    sub.is_enabled = !sub.is_enabled
+  } catch { /* silent */ } finally {
+    subsSubmitting.value = null
+  }
+}
+
+async function saveSubChannels(sub: Subscription) {
+  subsSubmitting.value = sub.id
+  try {
+    await api.patch(`/api/notifications/subscriptions/${sub.id}/`, { preferred_channels: sub.preferred_channels })
+    editSub.value = null
+  } catch { /* silent */ } finally {
+    subsSubmitting.value = null
+  }
+}
+
+function toggleChannel(sub: Subscription, key: string) {
+  const idx = sub.preferred_channels.indexOf(key)
+  if (idx === -1) sub.preferred_channels.push(key)
+  else sub.preferred_channels.splice(idx, 1)
+}
+
 // ── Channels API ─────────────────────────────────────────────
 async function fetchChannels() {
   channelsLoading.value = true
@@ -391,11 +467,12 @@ async function fetchChannels() {
 watch(activeTab, (tab) => {
   if (tab === 'alerts' && alertRules.value.length === 0 && !alertLoading.value) fetchAlertRules()
   if (tab === 'channels' && channels.value.length === 0 && !channelsLoading.value) fetchChannels()
+  if (tab === 'subscriptions' && subscriptions.value.length === 0 && !subsLoading.value) fetchSubscriptions()
 })
 
 // ── Init ─────────────────────────────────────────────────────
 onMounted(async () => {
-  await Promise.all([fetchNotifications(), fetchUnreadCount(), fetchStats()])
+  await Promise.all([fetchNotifications(), fetchUnreadCount(), fetchStats(), fetchSubscriptions()])
 })
 </script>
 
@@ -409,15 +486,21 @@ onMounted(async () => {
       </div>
       <div class="page-header__tabs">
         <button
-          v-for="tab in (['notifications', 'alerts', 'channels'] as Tab[])"
+          v-for="tab in (['notifications', 'alerts', 'channels', 'subscriptions'] as Tab[])"
           :key="tab"
           :class="['tab-btn', { 'tab-btn--active': activeTab === tab }]"
           @click="activeTab = tab"
         >
-          <Bell    v-if="tab === 'notifications'" :size="15" />
-          <AlertTriangle v-else-if="tab === 'alerts'" :size="15" />
-          <Mail    v-else :size="15" />
-          <span>{{ tab === 'notifications' ? 'Notifications' : tab === 'alerts' ? 'Règles d\'alerte' : 'Canaux' }}</span>
+          <Bell          v-if="tab === 'notifications'"  :size="15" />
+          <AlertTriangle v-else-if="tab === 'alerts'"   :size="15" />
+          <Mail          v-else-if="tab === 'channels'"  :size="15" />
+          <Bell          v-else                          :size="15" />
+          <span>{{
+            tab === 'notifications'  ? 'Notifications'
+            : tab === 'alerts'       ? 'Règles d\'alerte'
+            : tab === 'channels'     ? 'Canaux'
+            : 'Abonnements'
+          }}</span>
           <span v-if="tab === 'notifications' && unreadCount > 0" class="tab-badge">{{ unreadCount }}</span>
         </button>
       </div>
@@ -817,6 +900,146 @@ onMounted(async () => {
             {{ ch.is_active ? 'Actif' : 'Inactif' }}
           </span>
         </div>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════════════
+         TAB 4 — ABONNEMENTS
+    ═════════════════════════════════════════════════════════ -->
+    <section v-else-if="activeTab === 'subscriptions'" class="tab-section">
+      <div class="section-header">
+        <h2 class="section-title">Abonnements aux notifications</h2>
+        <button class="btn btn--ghost btn--icon" @click="fetchSubscriptions">
+          <RefreshCcw :size="15" :class="{ 'spin': subsLoading }" />
+        </button>
+      </div>
+
+      <!-- Loading skeleton -->
+      <template v-if="subsLoading">
+        <div v-for="i in 5" :key="i" class="alert-skeleton">
+          <div class="skel skel--icon" />
+          <div class="skel skel--alert-name" style="flex:1" />
+          <div class="skel skel--alert-pill" />
+          <div class="skel skel--alert-pill" />
+          <div class="skel skel--alert-pill" />
+        </div>
+      </template>
+
+      <!-- Empty -->
+      <div v-else-if="subscriptions.length === 0" class="empty-state">
+        <Bell :size="40" class="empty-state__icon" />
+        <p class="empty-state__text">Aucun abonnement configuré</p>
+        <p class="empty-state__sub">
+          Les abonnements apparaissent automatiquement selon vos types de notifications actifs.
+        </p>
+        <button class="btn btn--primary btn--sm" @click="activeTab = 'notifications'">
+          <Bell :size="14" /> Voir les notifications
+        </button>
+      </div>
+
+      <!-- Subscriptions table -->
+      <div v-else class="alert-table-wrap">
+        <table class="alert-table">
+          <thead>
+            <tr>
+              <th>Type de notification</th>
+              <th>Activé</th>
+              <th>Canaux préférés</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="sub in subscriptions" :key="sub.id">
+              <!-- Type -->
+              <td>
+                <div class="sub-type-cell">
+                  <div :class="['notif-icon', `notif-icon--${typeColor(sub.notification_type)}`]" style="width:28px;height:28px;flex-shrink:0">
+                    <component :is="typeIcon(sub.notification_type)" :size="14" />
+                  </div>
+                  <span class="rule-name">
+                    {{ sub.notification_type_display || SUB_TYPE_LABELS[sub.notification_type] || sub.notification_type }}
+                  </span>
+                </div>
+              </td>
+
+              <!-- Toggle activé -->
+              <td>
+                <button
+                  :class="['toggle-btn', { 'toggle-btn--on': sub.is_enabled }]"
+                  :disabled="subsSubmitting === sub.id"
+                  :title="sub.is_enabled ? 'Désactiver' : 'Activer'"
+                  @click="toggleSubscription(sub)"
+                >
+                  <ToggleRight v-if="sub.is_enabled" :size="22" />
+                  <ToggleLeft  v-else                 :size="22" />
+                  <span>{{ sub.is_enabled ? 'Activé' : 'Désactivé' }}</span>
+                </button>
+              </td>
+
+              <!-- Canaux préférés -->
+              <td>
+                <div class="sub-channels-cell">
+                  <template v-if="editSub === sub.id">
+                    <!-- Mode édition : badges cliquables -->
+                    <button
+                      v-for="ch in AVAILABLE_CHANNELS"
+                      :key="ch.key"
+                      :class="['sub-channel-btn', { 'sub-channel-btn--active': sub.preferred_channels.includes(ch.key) }]"
+                      @click="toggleChannel(sub, ch.key)"
+                    >
+                      <component :is="ch.icon" :size="12" />
+                      {{ ch.label }}
+                    </button>
+                  </template>
+                  <template v-else>
+                    <!-- Mode lecture : badges affichage -->
+                    <span
+                      v-for="key in sub.preferred_channels"
+                      :key="key"
+                      class="badge badge--amber"
+                    >
+                      {{ AVAILABLE_CHANNELS.find(c => c.key === key)?.label ?? key }}
+                    </span>
+                    <span v-if="sub.preferred_channels.length === 0" class="badge badge--muted">
+                      Aucun
+                    </span>
+                  </template>
+                </div>
+              </td>
+
+              <!-- Actions -->
+              <td>
+                <div class="action-row">
+                  <template v-if="editSub === sub.id">
+                    <button
+                      class="btn btn--primary btn--xs"
+                      :disabled="subsSubmitting === sub.id"
+                      @click="saveSubChannels(sub)"
+                    >
+                      <Check :size="12" />
+                      {{ subsSubmitting === sub.id ? '…' : 'Sauver' }}
+                    </button>
+                    <button
+                      class="btn btn--ghost btn--icon btn--xs"
+                      @click="editSub = null"
+                    >
+                      <X :size="12" />
+                    </button>
+                  </template>
+                  <template v-else>
+                    <button
+                      class="btn btn--ghost btn--icon btn--xs"
+                      title="Modifier les canaux"
+                      @click="editSub = sub.id"
+                    >
+                      <Pencil :size="13" />
+                    </button>
+                  </template>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </section>
   </div>
@@ -1644,6 +1867,48 @@ onMounted(async () => {
   font-size: var(--text-sm);
   color: var(--text-muted);
   margin: 0;
+}
+
+/* ── Subscriptions tab ───────────────────────────────────── */
+.sub-type-cell {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.sub-channels-cell {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.sub-channel-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-muted);
+  color: var(--text-muted);
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.sub-channel-btn:hover {
+  background: var(--surface-overlay);
+  color: var(--text-primary);
+  border-color: var(--border-default);
+}
+
+.sub-channel-btn--active {
+  background: var(--accent-surface);
+  color: var(--accent);
+  border-color: var(--accent-dim);
 }
 
 /* ── Spin animation ──────────────────────────────────────── */

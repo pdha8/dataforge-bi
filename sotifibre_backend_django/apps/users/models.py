@@ -295,9 +295,10 @@ class Permission(BaseModel):
 
 class Role(BaseModel):
     """Rôles avec permissions associées pour Sotifibre BI"""
-    name = models.CharField('Nom', max_length=100, unique=True)
+    name = models.CharField('Nom (slug)', max_length=100, unique=True)
+    display_name = models.CharField('Nom affiché', max_length=200, blank=True)
     description = models.TextField('Description', blank=True)
-    permissions = models.JSONField('Permissions', default=list, 
+    permissions = models.JSONField('Permissions', default=list,
                                   help_text="Liste des codes de permission")
     
     class Meta:

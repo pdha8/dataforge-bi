@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import api from '@/api/axios'
 import {
   Users, Shield, Settings, ScrollText,
@@ -8,20 +8,22 @@ import {
   Globe, Database, Bell, Lock,
   CheckCircle2, XCircle, AlertTriangle, Info,
   Key, Plug, Users2,
+  Activity, ExternalLink, Clock, RefreshCcw,
 } from 'lucide-vue-next'
 
 // ── Types ──────────────────────────────────────────────────
-type TabId      = 'users' | 'roles' | 'teams' | 'settings' | 'audit'
-type UserRole   = 'admin' | 'analyst' | 'contributor' | 'reader'
-type UserStatus = 'active' | 'inactive'
+type TabId      = 'users' | 'roles' | 'teams' | 'settings' | 'audit' | 'vizactivity' | 'system'
+type UserRole   = 'superadmin' | 'admin' | 'bi_analyst' | 'bi_developer' | 'bi_consumer' | 'viewer'
+type UserStatus = 'active' | 'inactive' | 'suspended' | 'locked'
 interface AppUser {
-  id: number
+  id: string
   name: string
   email: string
   role: UserRole
   status: UserStatus
   last_login: string
   initials: string
+  api_access_enabled?: boolean
 }
 
 interface UserActivity {
@@ -41,10 +43,14 @@ interface UserActivity {
   ip_address: string
 }
 
-interface Permission {
-  key: string
-  label: string
-  admin: boolean; analyst: boolean; contributor: boolean; reader: boolean
+interface TeamMember {
+  id: string
+  username: string
+  email: string
+  full_name: string
+  role: string
+  role_display: string
+  avatar: string | null
 }
 
 interface Team {
@@ -53,9 +59,18 @@ interface Team {
   description: string
   team_lead: string | null
   team_lead_name: string
-  members: any[]
-  member_count: number
+  members: string[]
+  members_list: TeamMember[]
+  members_count: number
   created_at: string
+}
+
+interface Role {
+  id: number | string
+  name: string
+  display_name: string
+  description: string
+  user_count?: number
 }
 
 interface UserStatsAPI {
@@ -67,38 +82,48 @@ interface UserStatsAPI {
 
 // ── Tabs ───────────────────────────────────────────────────
 const TABS: Array<{ id: TabId; label: string; icon: any }> = [
-  { id: 'users',    label: 'Utilisateurs',        icon: Users      },
-  { id: 'roles',    label: 'Rôles',               icon: Shield     },
-  { id: 'teams',    label: 'Équipes',             icon: Users2     },
-  { id: 'settings', label: 'Paramètres',          icon: Settings   },
-  { id: 'audit',    label: "Journal d'audit",     icon: ScrollText },
+  { id: 'users',       label: 'Utilisateurs',        icon: Users      },
+  { id: 'roles',       label: 'Rôles',               icon: Shield     },
+  { id: 'teams',       label: 'Équipes',             icon: Users2     },
+  { id: 'settings',    label: 'Paramètres',          icon: Settings   },
+  { id: 'audit',       label: "Journal d'audit",     icon: ScrollText },
+  { id: 'vizactivity', label: 'Activités viz.',       icon: Activity   },
+  { id: 'system',      label: 'Système',             icon: Settings   },
 ]
 
 const activeTab = ref<TabId>('users')
 
 // ── Role metadata ──────────────────────────────────────────
 const ROLE_META: Record<UserRole, { label: string; color: string; desc: string }> = {
-  admin:       { label: 'Administrateur', color: 'oklch(76% 0.14 62)',  desc: 'Accès complet à toutes les fonctionnalités et paramètres' },
-  analyst:     { label: 'Analyste',       color: 'oklch(65% 0.13 148)', desc: 'Création et gestion des visualisations, tableaux de bord et KPIs' },
-  contributor: { label: 'Contributeur',   color: 'oklch(60% 0.12 258)', desc: 'Création de visualisations et contribution aux tableaux de bord' },
-  reader:      { label: 'Lecteur',        color: 'oklch(68% 0.12 290)', desc: 'Consultation en lecture seule des tableaux de bord publiés' },
+  superadmin:   { label: 'Super Admin',     color: 'oklch(76% 0.14 30)',  desc: 'Accès total à la plateforme, gestion des autres admins' },
+  admin:        { label: 'Administrateur',  color: 'oklch(76% 0.14 62)',  desc: 'Accès complet à toutes les fonctionnalités et paramètres' },
+  bi_analyst:   { label: 'Analyste BI',     color: 'oklch(65% 0.13 148)', desc: 'Création et gestion des visualisations, tableaux de bord et KPIs' },
+  bi_developer: { label: 'Développeur BI',  color: 'oklch(60% 0.12 258)', desc: 'Développement de pipelines ETL, sources de données et entrepôt' },
+  bi_consumer:  { label: 'Consommateur BI', color: 'oklch(62% 0.11 220)', desc: 'Consultation des tableaux de bord et rapports partagés' },
+  viewer:       { label: 'Observateur',     color: 'oklch(68% 0.12 290)', desc: 'Consultation en lecture seule des tableaux de bord publiés' },
 }
 
 // ── Permissions matrix ─────────────────────────────────────
+interface Permission {
+  key: string
+  label: string
+  superadmin: boolean; admin: boolean; bi_analyst: boolean; bi_developer: boolean; bi_consumer: boolean; viewer: boolean
+}
+
 const PERMISSIONS: Permission[] = [
-  { key: 'user_manage',   label: 'Gérer les utilisateurs',      admin: true,  analyst: false, contributor: false, reader: false },
-  { key: 'source_write',  label: 'Créer/modifier des sources',  admin: true,  analyst: false, contributor: false, reader: false },
-  { key: 'source_read',   label: 'Voir les sources',            admin: true,  analyst: true,  contributor: true,  reader: false },
-  { key: 'pipeline_run',  label: 'Exécuter des pipelines',      admin: true,  analyst: true,  contributor: false, reader: false },
-  { key: 'pipeline_read', label: 'Voir les pipelines',          admin: true,  analyst: true,  contributor: true,  reader: false },
-  { key: 'dw_read',       label: 'Explorer le Data Warehouse',  admin: true,  analyst: true,  contributor: true,  reader: false },
-  { key: 'viz_write',     label: 'Créer des visualisations',    admin: true,  analyst: true,  contributor: true,  reader: false },
-  { key: 'viz_read',      label: 'Voir les visualisations',     admin: true,  analyst: true,  contributor: true,  reader: true  },
-  { key: 'dash_publish',  label: 'Publier des tableaux de bord',admin: true,  analyst: true,  contributor: false, reader: false },
-  { key: 'dash_read',     label: 'Voir les tableaux de bord',   admin: true,  analyst: true,  contributor: true,  reader: true  },
-  { key: 'kpi_write',     label: 'Gérer les KPIs',              admin: true,  analyst: true,  contributor: false, reader: false },
-  { key: 'kpi_read',      label: 'Voir les KPIs',               admin: true,  analyst: true,  contributor: true,  reader: true  },
-  { key: 'settings',      label: 'Modifier les paramètres',     admin: true,  analyst: false, contributor: false, reader: false },
+  { key: 'user_manage',   label: 'Gérer les utilisateurs',      superadmin: true,  admin: true,  bi_analyst: false, bi_developer: false, bi_consumer: false, viewer: false },
+  { key: 'source_write',  label: 'Créer/modifier des sources',  superadmin: true,  admin: true,  bi_analyst: false, bi_developer: true,  bi_consumer: false, viewer: false },
+  { key: 'source_read',   label: 'Voir les sources',            superadmin: true,  admin: true,  bi_analyst: true,  bi_developer: true,  bi_consumer: true,  viewer: false },
+  { key: 'pipeline_run',  label: 'Exécuter des pipelines',      superadmin: true,  admin: true,  bi_analyst: true,  bi_developer: true,  bi_consumer: false, viewer: false },
+  { key: 'pipeline_read', label: 'Voir les pipelines',          superadmin: true,  admin: true,  bi_analyst: true,  bi_developer: true,  bi_consumer: false, viewer: false },
+  { key: 'dw_read',       label: 'Explorer le Data Warehouse',  superadmin: true,  admin: true,  bi_analyst: true,  bi_developer: true,  bi_consumer: false, viewer: false },
+  { key: 'viz_write',     label: 'Créer des visualisations',    superadmin: true,  admin: true,  bi_analyst: true,  bi_developer: true,  bi_consumer: false, viewer: false },
+  { key: 'viz_read',      label: 'Voir les visualisations',     superadmin: true,  admin: true,  bi_analyst: true,  bi_developer: true,  bi_consumer: true,  viewer: true  },
+  { key: 'dash_publish',  label: 'Publier des tableaux de bord',superadmin: true,  admin: true,  bi_analyst: true,  bi_developer: true,  bi_consumer: false, viewer: false },
+  { key: 'dash_read',     label: 'Voir les tableaux de bord',   superadmin: true,  admin: true,  bi_analyst: true,  bi_developer: true,  bi_consumer: true,  viewer: true  },
+  { key: 'kpi_write',     label: 'Gérer les KPIs',              superadmin: true,  admin: true,  bi_analyst: true,  bi_developer: true,  bi_consumer: false, viewer: false },
+  { key: 'kpi_read',      label: 'Voir les KPIs',               superadmin: true,  admin: true,  bi_analyst: true,  bi_developer: true,  bi_consumer: true,  viewer: true  },
+  { key: 'settings',      label: 'Modifier les paramètres',     superadmin: true,  admin: true,  bi_analyst: false, bi_developer: false, bi_consumer: false, viewer: false },
 ]
 
 // ── Settings state ─────────────────────────────────────────
@@ -123,10 +148,16 @@ const settingsSaving   = ref(false)
 
 async function saveSettings() {
   settingsSaving.value = true
-  await new Promise(r => setTimeout(r, 700))
-  settingsSaving.value = false
-  settingsSaved.value  = true
-  setTimeout(() => { settingsSaved.value = false }, 2500)
+  try {
+    const entries = Object.entries(settings.value)
+    await Promise.all(entries.map(([key, value]) =>
+      api.post('/api/users/settings/', { key, value: String(value) }).catch(() => null)
+    ))
+    settingsSaved.value = true
+    setTimeout(() => { settingsSaved.value = false }, 2500)
+  } catch { /* ignore */ } finally {
+    settingsSaving.value = false
+  }
 }
 
 // ── Users state ────────────────────────────────────────────
@@ -136,15 +167,45 @@ const searchQuery    = ref('')
 const filterRole     = ref<UserRole | 'all'>('all')
 const filterStatus   = ref<UserStatus | 'all'>('all')
 const drawerOpen     = ref(false)
-const deleteConfirm  = ref<number | null>(null)
+const deleteConfirm  = ref<string | null>(null)
 const submitting     = ref(false)
 
-const form = ref({ name: '', email: '', role: 'reader' as UserRole })
+const form = ref({
+  first_name: '', last_name: '', username: '',
+  email: '', role: 'viewer' as UserRole,
+  department: '', job_title: '', employee_id: '',
+  password: '',
+})
 
 // ── Audit state ────────────────────────────────────────────
 const auditLog       = ref<UserActivity[]>([])
 const auditLoading   = ref(true)
 const auditFilter    = ref('all')
+
+// ── Viz Activity state ────────────────────────────────────
+interface VizActivity {
+  id: string
+  activity_type: string
+  description?: string
+  ip_address?: string
+  user_agent?: string
+  created_at: string
+}
+const vizActivities        = ref<VizActivity[]>([])
+const vizActivitiesLoading = ref(false)
+const vizActivitiesFilter  = ref('all')
+
+async function fetchVizActivities() {
+  vizActivitiesLoading.value = true
+  try {
+    const { data } = await api.get('/api/visualizations/activities/')
+    vizActivities.value = Array.isArray(data?.results) ? data.results : Array.isArray(data) ? data : []
+  } catch {
+    vizActivities.value = []
+  } finally {
+    vizActivitiesLoading.value = false
+  }
+}
 
 // ── Computed ───────────────────────────────────────────────
 const filteredUsers = computed(() => {
@@ -161,12 +222,14 @@ const userStats = computed(() => ({
   total:    users.value.length,
   active:   users.value.filter(u => u.status === 'active').length,
   inactive: users.value.filter(u => u.status === 'inactive').length,
-  admins:   users.value.filter(u => u.role === 'admin').length,
+  admins:   users.value.filter(u => u.role === 'admin' || u.role === 'superadmin').length,
 }))
 
 const roleUserCounts = computed(() => {
-  const counts: Record<UserRole, number> = { admin: 0, analyst: 0, contributor: 0, reader: 0 }
-  users.value.forEach(u => counts[u.role]++)
+  const counts: Record<UserRole, number> = {
+    superadmin: 0, admin: 0, bi_analyst: 0, bi_developer: 0, bi_consumer: 0, viewer: 0,
+  }
+  users.value.forEach(u => { if (u.role in counts) counts[u.role]++ })
   return counts
 })
 
@@ -183,6 +246,19 @@ const filteredAudit = computed(() =>
     : auditLog.value.filter(e => e.action === auditFilter.value)
 )
 
+const filteredVizActivities = computed(() =>
+  vizActivitiesFilter.value === 'all'
+    ? vizActivities.value
+    : vizActivities.value.filter(a => a.activity_type === vizActivitiesFilter.value)
+)
+
+const uniqueVizActions = computed(() => {
+  const seen = new Set<string>()
+  return vizActivities.value
+    .filter(a => { if (seen.has(a.activity_type)) return false; seen.add(a.activity_type); return true })
+    .map(a => a.activity_type)
+})
+
 // ── Helpers ────────────────────────────────────────────────
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime()
@@ -194,12 +270,24 @@ function timeAgo(dateStr: string): string {
   return `il y a ${Math.floor(hrs / 24)} j`
 }
 
-function toggleStatus(u: AppUser) {
-  u.status = u.status === 'active' ? 'inactive' : 'active'
+async function toggleStatus(u: AppUser) {
+  const prev = u.status
+  const newStatus: UserStatus = u.status === 'active' ? 'inactive' : 'active'
+  u.status = newStatus
+  try {
+    await api.post(`/api/users/users/${u.id}/toggle_status/`, { status: newStatus })
+  } catch {
+    u.status = prev
+  }
 }
 
-function deleteUser(id: number) {
-  users.value = users.value.filter(u => u.id !== id)
+async function deleteUser(id: string) {
+  try {
+    await api.delete(`/api/users/users/${id}/`)
+    users.value = users.value.filter(u => u.id !== id)
+  } catch {
+    /* ignore */
+  }
   deleteConfirm.value = null
 }
 
@@ -225,19 +313,28 @@ function auditBadgeClass(entry: UserActivity): string {
 }
 
 async function inviteUser() {
-  if (!form.value.name.trim() || !form.value.email.trim()) return
+  if (!form.value.email.trim() || !form.value.password.trim()) return
   submitting.value = true
-  await new Promise(r => setTimeout(r, 600))
-  const parts = form.value.name.trim().split(' ')
-  const initials = parts.map(p => p[0]).join('').toUpperCase().slice(0, 2)
-  users.value = [{
-    id: Date.now(), name: form.value.name, email: form.value.email,
-    role: form.value.role, status: 'active',
-    last_login: new Date().toISOString(), initials,
-  }, ...users.value]
-  submitting.value = false
-  drawerOpen.value = false
-  form.value = { name: '', email: '', role: 'reader' }
+  try {
+    const payload: Record<string, string> = {
+      email:      form.value.email,
+      role:       form.value.role,
+      password:   form.value.password,
+    }
+    if (form.value.first_name)  payload.first_name  = form.value.first_name
+    if (form.value.last_name)   payload.last_name   = form.value.last_name
+    if (form.value.username)    payload.username    = form.value.username
+    if (form.value.department)  payload.department  = form.value.department
+    if (form.value.job_title)   payload.job_title   = form.value.job_title
+    if (form.value.employee_id) payload.employee_id = form.value.employee_id
+
+    await api.post('/api/users/users/', payload)
+    drawerOpen.value = false
+    form.value = { first_name: '', last_name: '', username: '', email: '', role: 'viewer', department: '', job_title: '', employee_id: '', password: '' }
+    await fetchUsers()
+  } catch { /* silent */ } finally {
+    submitting.value = false
+  }
 }
 
 async function fetchUsers() {
@@ -267,9 +364,9 @@ async function fetchActivities() {
 }
 
 // ── User extra actions ─────────────────────────────────────
-const resetPwdLoading = ref<number | null>(null)
-const resetPwdSuccess = ref<number | null>(null)
-const toggleApiLoading = ref<number | null>(null)
+const resetPwdLoading = ref<string | null>(null)
+const resetPwdSuccess = ref<string | null>(null)
+const toggleApiLoading = ref<string | null>(null)
 
 async function resetPassword(user: AppUser) {
   resetPwdLoading.value = user.id
@@ -284,7 +381,7 @@ async function resetPassword(user: AppUser) {
   }
 }
 
-async function toggleApiAccess(user: AppUser & { api_access_enabled?: boolean }) {
+async function toggleApiAccess(user: AppUser) {
   toggleApiLoading.value = user.id
   try {
     const { data } = await api.post(`/api/users/users/${user.id}/toggle_api_access/`)
@@ -305,6 +402,97 @@ async function fetchUserStats() {
     apiUserStats.value = data
   } catch {
     apiUserStats.value = null
+  }
+}
+
+// ── Roles state ────────────────────────────────────────────
+const apiRoles        = ref<Role[]>([])
+const rolesLoading    = ref(false)
+const roleDrawerOpen  = ref(false)
+const editRole        = ref<Role | null>(null)
+const roleDeleteConfirm = ref<number | string | null>(null)
+const roleSubmitting  = ref(false)
+const roleToast       = ref('')
+const roleForm        = ref({ name: '', display_name: '', description: '' })
+
+const ROLE_DEFAULT_COLORS: Record<string, string> = {
+  superadmin:   'oklch(76% 0.14 30)',
+  admin:        'oklch(76% 0.14 62)',
+  bi_analyst:   'oklch(65% 0.13 148)',
+  bi_developer: 'oklch(60% 0.12 258)',
+  bi_consumer:  'oklch(62% 0.11 220)',
+  viewer:       'oklch(68% 0.12 290)',
+}
+function roleColor(name: string): string {
+  return ROLE_DEFAULT_COLORS[name] ?? 'oklch(62% 0.12 258)'
+}
+
+function showRoleToast(msg: string) {
+  roleToast.value = msg
+  setTimeout(() => { roleToast.value = '' }, 2500)
+}
+
+function openCreateRole() {
+  editRole.value = null
+  roleForm.value = { name: '', display_name: '', description: '' }
+  roleDrawerOpen.value = true
+}
+
+function openEditRole(role: Role) {
+  editRole.value = role
+  roleForm.value = { name: role.name, display_name: role.display_name, description: role.description }
+  roleDrawerOpen.value = true
+}
+
+async function fetchRoles() {
+  rolesLoading.value = true
+  try {
+    const { data } = await api.get('/api/users/roles/')
+    const rows = Array.isArray(data?.results) ? data.results : Array.isArray(data) ? data : []
+    apiRoles.value = rows
+  } catch {
+    apiRoles.value = []
+  } finally {
+    rolesLoading.value = false
+  }
+}
+
+async function saveRole() {
+  if (!roleForm.value.name.trim()) return
+  roleSubmitting.value = true
+  const isEdit = !!editRole.value
+  try {
+    const payload = {
+      name:         roleForm.value.name,
+      display_name: roleForm.value.display_name,
+      description:  roleForm.value.description,
+    }
+    if (editRole.value) {
+      const { data } = await api.patch(`/api/users/roles/${editRole.value.id}/`, payload)
+      const idx = apiRoles.value.findIndex(r => r.id === editRole.value!.id)
+      if (idx !== -1) apiRoles.value[idx] = data
+    } else {
+      const { data } = await api.post('/api/users/roles/', payload)
+      apiRoles.value = [...apiRoles.value, data]
+    }
+    roleDrawerOpen.value = false
+    editRole.value = null
+    showRoleToast(isEdit ? 'Rôle mis à jour' : 'Rôle créé')
+  } catch {
+    // silent
+  } finally {
+    roleSubmitting.value = false
+  }
+}
+
+async function deleteRole(id: number | string) {
+  try {
+    await api.delete(`/api/users/roles/${id}/`)
+    apiRoles.value = apiRoles.value.filter(r => r.id !== id)
+    roleDeleteConfirm.value = null
+    showRoleToast('Rôle supprimé')
+  } catch {
+    // silent
   }
 }
 
@@ -409,14 +597,14 @@ async function addMember() {
   if (!selectedTeam.value || !newMemberUUID.value.trim()) return
   memberActionLoading.value = true
   try {
-    const { data } = await api.post(`/api/users/teams/${selectedTeam.value.id}/add_member/`, {
+    const { data: resp } = await api.post(`/api/users/teams/${selectedTeam.value.id}/add_member/`, {
       user_id: newMemberUUID.value.trim(),
     })
-    // Refresh the team data
+    const team: Team = resp?.data ?? resp
     const idx = teams.value.findIndex(t => t.id === selectedTeam.value!.id)
-    if (idx !== -1 && data) {
-      teams.value[idx] = data
-      selectedTeam.value = data
+    if (idx !== -1 && team?.id) {
+      teams.value[idx] = team
+      selectedTeam.value = team
     } else {
       await fetchTeams()
       selectedTeam.value = teams.value.find(t => t.id === selectedTeam.value!.id) ?? null
@@ -430,18 +618,18 @@ async function addMember() {
   }
 }
 
-async function removeMember(userId: any) {
+async function removeMember(userId: string) {
   if (!selectedTeam.value) return
   memberActionLoading.value = true
   try {
-    const memberId = typeof userId === 'object' ? (userId.id ?? userId) : userId
-    const { data } = await api.post(`/api/users/teams/${selectedTeam.value.id}/remove_member/`, {
-      user_id: memberId,
+    const { data: resp } = await api.post(`/api/users/teams/${selectedTeam.value.id}/remove_member/`, {
+      user_id: userId,
     })
+    const team: Team = resp?.data ?? resp
     const idx = teams.value.findIndex(t => t.id === selectedTeam.value!.id)
-    if (idx !== -1 && data) {
-      teams.value[idx] = data
-      selectedTeam.value = data
+    if (idx !== -1 && team?.id) {
+      teams.value[idx] = team
+      selectedTeam.value = team
     } else {
       await fetchTeams()
       selectedTeam.value = teams.value.find(t => t.id === selectedTeam.value!.id) ?? null
@@ -454,7 +642,11 @@ async function removeMember(userId: any) {
   }
 }
 
-onMounted(() => { fetchUsers(); fetchActivities(); fetchTeams(); fetchUserStats() })
+watch(activeTab, (tab) => {
+  if (tab === 'vizactivity' && vizActivities.value.length === 0) fetchVizActivities()
+})
+
+onMounted(() => { fetchUsers(); fetchActivities(); fetchTeams(); fetchUserStats(); fetchRoles() })
 </script>
 
 <template>
@@ -539,7 +731,7 @@ onMounted(() => { fetchUsers(); fetchActivities(); fetchTeams(); fetchUserStats(
           <ChevronDown :size="13" class="select-arrow" />
         </div>
         <button class="btn-primary" @click="drawerOpen = true">
-          <Plus :size="14" /><span>Inviter</span>
+          <Plus :size="14" /><span>Créer un utilisateur</span>
         </button>
       </div>
 
@@ -568,7 +760,7 @@ onMounted(() => { fetchUsers(); fetchActivities(); fetchTeams(); fetchUserStats(
                 <div class="user-ident">
                   <div
                     class="avatar"
-                    :style="{ '--ac': ROLE_META[user.role].color }"
+                    :style="{ '--ac': (ROLE_META[user.role] ?? ROLE_META.viewer).color }"
                   >{{ user.initials }}</div>
                   <div class="user-info">
                     <span class="user-name">{{ user.name }}</span>
@@ -579,8 +771,8 @@ onMounted(() => { fetchUsers(); fetchActivities(); fetchTeams(); fetchUserStats(
 
               <!-- Role -->
               <td class="utd">
-                <span class="role-badge" :style="{ '--rc': ROLE_META[user.role].color }">
-                  {{ ROLE_META[user.role].label }}
+                <span class="role-badge" :style="{ '--rc': (ROLE_META[user.role] ?? ROLE_META.viewer).color }">
+                  {{ (ROLE_META[user.role] ?? ROLE_META.viewer).label }}
                 </span>
               </td>
 
@@ -623,10 +815,10 @@ onMounted(() => { fetchUsers(); fetchActivities(); fetchTeams(); fetchUserStats(
                   <!-- Toggle API access -->
                   <button
                     class="act-btn"
-                    :class="{ 'act-btn--api-on': (user as any).api_access_enabled }"
-                    :title="(user as any).api_access_enabled ? 'Désactiver accès API' : 'Activer accès API'"
+                    :class="{ 'act-btn--api-on': user.api_access_enabled }"
+                    :title="user.api_access_enabled ? 'Désactiver accès API' : 'Activer accès API'"
                     :disabled="toggleApiLoading === user.id"
-                    @click="toggleApiAccess(user as any)"
+                    @click="toggleApiAccess(user)"
                   >
                     <span v-if="toggleApiLoading === user.id" class="spinner spinner--sm" aria-label="…"></span>
                     <Plug v-else :size="13" />
@@ -661,8 +853,63 @@ onMounted(() => { fetchUsers(); fetchActivities(); fetchTeams(); fetchUserStats(
     <!-- ════════════════════════════════════════════════════ -->
     <template v-else-if="activeTab === 'roles'">
 
-      <!-- Role cards -->
-      <div class="roles-grid">
+      <!-- Toast -->
+      <Transition name="fade">
+        <div v-if="roleToast" class="team-toast">
+          <CheckCircle2 :size="14" />
+          {{ roleToast }}
+        </div>
+      </Transition>
+
+      <!-- Toolbar -->
+      <div class="toolbar">
+        <span class="audit-count">
+          {{ rolesLoading ? 'Chargement…' : `${apiRoles.length} rôle${apiRoles.length !== 1 ? 's' : ''}` }}
+        </span>
+        <button class="btn-primary" style="margin-left:auto" @click="openCreateRole">
+          <Plus :size="14" /><span>Nouveau rôle</span>
+        </button>
+      </div>
+
+      <!-- Role cards — API data -->
+      <div v-if="!rolesLoading && apiRoles.length > 0" class="roles-grid">
+        <div
+          v-for="role in apiRoles"
+          :key="role.id"
+          class="role-card"
+          :style="{ '--rc': roleColor(role.name) }"
+        >
+          <div class="role-card-hd">
+            <div class="role-icon-wrap"><Shield :size="20" /></div>
+            <div style="flex:1;min-width:0">
+              <h3 class="role-name">{{ role.display_name || role.name }}</h3>
+              <span class="role-users">{{ role.user_count ?? 0 }} utilisateur{{ (role.user_count ?? 0) !== 1 ? 's' : '' }}</span>
+            </div>
+          </div>
+          <p class="role-desc">{{ role.description || '—' }}</p>
+          <div class="role-card-actions">
+            <button class="act-btn" title="Modifier" @click="openEditRole(role)">
+              <Pencil :size="13" />
+            </button>
+            <template v-if="roleDeleteConfirm === role.id">
+              <span class="del-label">Supprimer ?</span>
+              <button class="act-btn act-btn--yes" @click="deleteRole(role.id)">Oui</button>
+              <button class="act-btn" @click="roleDeleteConfirm = null">Non</button>
+            </template>
+            <button v-else class="act-btn act-btn--del" title="Supprimer" @click="roleDeleteConfirm = role.id">
+              <Trash2 :size="13" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Skeleton -->
+      <div v-else-if="rolesLoading" class="roles-grid">
+        <div v-for="i in 4" :key="i" class="user-skel" style="height:120px;margin:0"></div>
+      </div>
+
+      <!-- Fallback: static ROLE_META when API returns empty -->
+      <div v-else class="roles-grid">
         <div
           v-for="(meta, key) in ROLE_META"
           :key="key"
@@ -670,9 +917,7 @@ onMounted(() => { fetchUsers(); fetchActivities(); fetchTeams(); fetchUserStats(
           :style="{ '--rc': meta.color }"
         >
           <div class="role-card-hd">
-            <div class="role-icon-wrap">
-              <Shield :size="20" />
-            </div>
+            <div class="role-icon-wrap"><Shield :size="20" /></div>
             <div>
               <h3 class="role-name">{{ meta.label }}</h3>
               <span class="role-users">{{ roleUserCounts[key as UserRole] }} utilisateur{{ roleUserCounts[key as UserRole] !== 1 ? 's' : '' }}</span>
@@ -682,7 +927,7 @@ onMounted(() => { fetchUsers(); fetchActivities(); fetchTeams(); fetchUserStats(
         </div>
       </div>
 
-      <!-- Permissions matrix -->
+      <!-- Permissions matrix (static reference) -->
       <div class="panel">
         <div class="panel-hd">
           <span class="panel-title">Matrice des permissions</span>
@@ -705,8 +950,8 @@ onMounted(() => { fetchUsers(); fetchActivities(); fetchTeams(); fetchUserStats(
             <tbody>
               <tr v-for="perm in PERMISSIONS" :key="perm.key" class="perm-row">
                 <td class="ptd ptd--perm">{{ perm.label }}</td>
-                <td v-for="role in (['admin','analyst','contributor','reader'] as UserRole[])" :key="role" class="ptd ptd--check">
-                  <Check v-if="perm[role]" :size="14" class="perm-yes" />
+                <td v-for="role in (['superadmin','admin','bi_analyst','bi_developer','bi_consumer','viewer'] as UserRole[])" :key="role" class="ptd ptd--check">
+                  <Check v-if="(perm as any)[role]" :size="14" class="perm-yes" />
                   <span v-else class="perm-no">—</span>
                 </td>
               </tr>
@@ -777,7 +1022,7 @@ onMounted(() => { fetchUsers(); fetchActivities(); fetchTeams(); fetchUserStats(
                 <span class="user-email">{{ team.team_lead_name || (team.team_lead ? team.team_lead : '—') }}</span>
               </td>
               <td class="utd utd--center">
-                <span class="member-count-badge">{{ team.member_count ?? team.members?.length ?? 0 }}</span>
+                <span class="member-count-badge">{{ team.members_count ?? team.members_list?.length ?? team.members?.length ?? 0 }}</span>
               </td>
               <td class="utd utd--right" @click.stop>
                 <div class="row-actions">
@@ -822,24 +1067,24 @@ onMounted(() => { fetchUsers(); fetchActivities(); fetchTeams(); fetchUserStats(
 
           <div class="team-members-body">
             <!-- Current members list -->
-            <div v-if="selectedTeam.members && selectedTeam.members.length > 0" class="members-list">
+            <div v-if="selectedTeam.members_list && selectedTeam.members_list.length > 0" class="members-list">
               <div
-                v-for="member in selectedTeam.members"
-                :key="typeof member === 'object' ? member.id : member"
+                v-for="member in selectedTeam.members_list"
+                :key="member.id"
                 class="member-row"
               >
                 <div class="member-avatar">
-                  {{ typeof member === 'object' ? (member.initials || (member.name || member.email || '?')[0].toUpperCase()) : '?' }}
+                  {{ (member.full_name || member.username || member.email || '?')[0].toUpperCase() }}
                 </div>
                 <div class="member-info">
-                  <span class="member-name">{{ typeof member === 'object' ? (member.name || member.username || 'Utilisateur') : member }}</span>
-                  <span class="member-email">{{ typeof member === 'object' ? member.email || '' : '' }}</span>
+                  <span class="member-name">{{ member.full_name || member.username || 'Utilisateur' }}</span>
+                  <span class="member-email">{{ member.email }}</span>
                 </div>
                 <button
                   class="act-btn act-btn--del"
                   title="Retirer du groupe"
                   :disabled="memberActionLoading"
-                  @click="removeMember(member)"
+                  @click="removeMember(member.id)"
                 >
                   <X :size="13" />
                 </button>
@@ -1098,6 +1343,116 @@ onMounted(() => { fetchUsers(); fetchActivities(); fetchTeams(); fetchUserStats(
 
     </template>
 
+    <!-- ════════════════════════════════════════════════════ -->
+    <!-- TAB: VIZ ACTIVITIES                                  -->
+    <!-- ════════════════════════════════════════════════════ -->
+    <template v-else-if="activeTab === 'vizactivity'">
+
+      <div class="toolbar">
+        <div class="select-wrap">
+          <select v-model="vizActivitiesFilter" class="filter-select">
+            <option value="all">Tous les types</option>
+            <option v-for="t in uniqueVizActions" :key="t" :value="t">{{ t }}</option>
+          </select>
+          <ChevronDown :size="13" class="select-arrow" />
+        </div>
+        <button class="btn-secondary" style="margin-left:auto" @click="fetchVizActivities">
+          <RefreshCcw :size="13" />
+          Actualiser
+        </button>
+        <span class="audit-count">{{ filteredVizActivities.length }} entrée{{ filteredVizActivities.length !== 1 ? 's' : '' }}</span>
+      </div>
+
+      <div v-if="vizActivitiesLoading" class="audit-timeline">
+        <div v-for="i in 6" :key="i" class="user-skel"></div>
+      </div>
+
+      <div v-else class="audit-timeline">
+        <div
+          v-for="(act, i) in filteredVizActivities"
+          :key="act.id"
+          class="audit-entry"
+          :style="{ '--ai': i }"
+        >
+          <div class="audit-icon-col">
+            <div class="audit-icon">
+              <Activity :size="13" />
+            </div>
+            <div v-if="i < filteredVizActivities.length - 1" class="audit-line"></div>
+          </div>
+          <div class="audit-body">
+            <div class="audit-top">
+              <span class="audit-action-badge">{{ act.activity_type }}</span>
+              <span v-if="act.ip_address" class="audit-entity-type">{{ act.ip_address }}</span>
+            </div>
+            <p class="audit-details">{{ act.description || '—' }}</p>
+            <span class="audit-time">{{ timeAgo(act.created_at) }}</span>
+          </div>
+        </div>
+        <div v-if="filteredVizActivities.length === 0" class="audit-empty">
+          <Info :size="24" />
+          <span>Aucune activité de visualisation trouvée.</span>
+        </div>
+      </div>
+
+    </template>
+
+    <!-- ════════════════════════════════════════════════════ -->
+    <!-- TAB: SYSTÈME                                         -->
+    <!-- ════════════════════════════════════════════════════ -->
+    <template v-else-if="activeTab === 'system'">
+
+      <section class="system-links">
+        <h3 class="system-section-title">Administration Django</h3>
+        <p class="system-section-desc">Accès direct aux modèles système non exposés par l'API REST.</p>
+
+        <div class="system-cards">
+          <a
+            href="http://192.168.224.128:8000/admin/core/config/"
+            target="_blank"
+            rel="noopener"
+            class="system-card"
+          >
+            <Database :size="20" class="system-card-icon" />
+            <div>
+              <p class="system-card-title">Configuration système</p>
+              <p class="system-card-desc">core.Config — paramètres globaux de la plateforme</p>
+            </div>
+            <ExternalLink :size="14" class="system-card-ext" />
+          </a>
+
+          <a
+            href="http://192.168.224.128:8000/admin/django_celery_beat/periodictask/"
+            target="_blank"
+            rel="noopener"
+            class="system-card"
+          >
+            <Clock :size="20" class="system-card-icon" />
+            <div>
+              <p class="system-card-title">Tâches planifiées</p>
+              <p class="system-card-desc">Celery Beat — gestion des tâches périodiques (cron)</p>
+            </div>
+            <ExternalLink :size="14" class="system-card-ext" />
+          </a>
+
+          <a
+            href="http://192.168.224.128:8000/admin/visualizations/visualizationactivity/"
+            target="_blank"
+            rel="noopener"
+            class="system-card"
+          >
+            <Activity :size="20" class="system-card-icon" />
+            <div>
+              <p class="system-card-title">Activités visualisations (admin)</p>
+              <p class="system-card-desc">visualizations.VisualizationActivity — journal complet</p>
+            </div>
+            <ExternalLink :size="14" class="system-card-ext" />
+          </a>
+        </div>
+      </section>
+
+    </template>
+
     <!-- ── Team create/edit drawer ──────────────────────── -->
     <Transition name="drawer-anim">
       <div v-if="teamDrawerOpen" class="drawer-overlay" @click.self="closeTeamDrawer">
@@ -1146,13 +1501,81 @@ onMounted(() => { fetchUsers(); fetchActivities(); fetchTeams(); fetchUserStats(
       </div>
     </Transition>
 
+    <!-- ── Role create/edit drawer ────────────────────────── -->
+    <Transition name="drawer-anim">
+      <div v-if="roleDrawerOpen" class="drawer-overlay" @click.self="roleDrawerOpen = false; editRole = null">
+        <aside class="drawer" role="dialog" aria-modal="true" :aria-label="editRole ? 'Modifier le rôle' : 'Nouveau rôle'">
+
+          <div class="drawer-hd">
+            <h3 class="drawer-title">{{ editRole ? 'Modifier le rôle' : 'Nouveau rôle' }}</h3>
+            <button class="drawer-close" @click="roleDrawerOpen = false; editRole = null" aria-label="Fermer">
+              <X :size="18" />
+            </button>
+          </div>
+
+          <form class="drawer-form" @submit.prevent="saveRole">
+
+            <div class="form-field">
+              <label class="form-label" for="rf-name">Identifiant (slug) <span class="req">*</span></label>
+              <input
+                id="rf-name"
+                v-model="roleForm.name"
+                class="form-input"
+                type="text"
+                placeholder="ex: analyst"
+                :disabled="!!editRole"
+                required
+              />
+            </div>
+
+            <div class="form-field">
+              <label class="form-label" for="rf-display">Nom affiché <span class="req">*</span></label>
+              <input
+                id="rf-display"
+                v-model="roleForm.display_name"
+                class="form-input"
+                type="text"
+                placeholder="ex: Analyste"
+                required
+              />
+            </div>
+
+            <div class="form-field">
+              <label class="form-label" for="rf-desc">Description</label>
+              <textarea
+                id="rf-desc"
+                v-model="roleForm.description"
+                class="form-input form-textarea"
+                placeholder="Décrivez les responsabilités de ce rôle…"
+                rows="3"
+              ></textarea>
+            </div>
+
+            <div class="drawer-footer">
+              <button type="button" class="btn-ghost" @click="roleDrawerOpen = false; editRole = null">Annuler</button>
+              <button
+                type="submit"
+                class="btn-primary"
+                :disabled="roleSubmitting"
+                :class="{ 'btn-primary--loading': roleSubmitting }"
+              >
+                <span v-if="!roleSubmitting">{{ editRole ? 'Enregistrer' : 'Créer le rôle' }}</span>
+                <span v-else class="spinner" aria-label="Enregistrement…"></span>
+              </button>
+            </div>
+
+          </form>
+        </aside>
+      </div>
+    </Transition>
+
     <!-- ── Invite user drawer ────────────────────────────── -->
     <Transition name="drawer-anim">
       <div v-if="drawerOpen" class="drawer-overlay" @click.self="drawerOpen = false">
-        <aside class="drawer" role="dialog" aria-modal="true" aria-label="Inviter un utilisateur">
+        <aside class="drawer" role="dialog" aria-modal="true" aria-label="Créer un utilisateur">
 
           <div class="drawer-hd">
-            <h3 class="drawer-title">Inviter un utilisateur</h3>
+            <h3 class="drawer-title">Créer un utilisateur</h3>
             <button class="drawer-close" @click="drawerOpen = false" aria-label="Fermer">
               <X :size="18" />
             </button>
@@ -1160,9 +1583,20 @@ onMounted(() => { fetchUsers(); fetchActivities(); fetchTeams(); fetchUserStats(
 
           <form class="drawer-form" @submit.prevent="inviteUser">
 
+            <div class="form-row-2">
+              <div class="form-field">
+                <label class="form-label" for="f-fname">Prénom</label>
+                <input id="f-fname" v-model="form.first_name" class="form-input" type="text" placeholder="Prénom" />
+              </div>
+              <div class="form-field">
+                <label class="form-label" for="f-lname">Nom</label>
+                <input id="f-lname" v-model="form.last_name" class="form-input" type="text" placeholder="Nom" />
+              </div>
+            </div>
+
             <div class="form-field">
-              <label class="form-label" for="f-name">Nom complet <span class="req">*</span></label>
-              <input id="f-name" v-model="form.name" class="form-input" type="text" placeholder="Prénom Nom" required />
+              <label class="form-label" for="f-username">Nom d'utilisateur</label>
+              <input id="f-username" v-model="form.username" class="form-input" type="text" placeholder="username" />
             </div>
 
             <div class="form-field">
@@ -1171,6 +1605,27 @@ onMounted(() => { fetchUsers(); fetchActivities(); fetchTeams(); fetchUserStats(
                 Adresse email <span class="req">*</span>
               </label>
               <input id="f-email" v-model="form.email" class="form-input" type="email" placeholder="prenom.nom@sotifibre.com" required />
+            </div>
+
+            <div class="form-field">
+              <label class="form-label" for="f-pwd">Mot de passe temporaire <span class="req">*</span></label>
+              <input id="f-pwd" v-model="form.password" class="form-input" type="password" placeholder="••••••••" required autocomplete="new-password" />
+            </div>
+
+            <div class="form-row-2">
+              <div class="form-field">
+                <label class="form-label" for="f-dept">Département</label>
+                <input id="f-dept" v-model="form.department" class="form-input" type="text" placeholder="Data & Analytics" />
+              </div>
+              <div class="form-field">
+                <label class="form-label" for="f-empid">Matricule</label>
+                <input id="f-empid" v-model="form.employee_id" class="form-input" type="text" placeholder="EMP-0001" />
+              </div>
+            </div>
+
+            <div class="form-field">
+              <label class="form-label" for="f-jobtitle">Poste</label>
+              <input id="f-jobtitle" v-model="form.job_title" class="form-input" type="text" placeholder="Data Engineer" />
             </div>
 
             <div class="form-field">
@@ -1195,8 +1650,8 @@ onMounted(() => { fetchUsers(); fetchActivities(); fetchTeams(); fetchUserStats(
             <div class="drawer-footer">
               <button type="button" class="btn-ghost" @click="drawerOpen = false">Annuler</button>
               <button type="submit" class="btn-primary" :disabled="submitting" :class="{ 'btn-primary--loading': submitting }">
-                <span v-if="!submitting">Envoyer l'invitation</span>
-                <span v-else class="spinner" aria-label="Envoi…"></span>
+                <span v-if="!submitting">Créer l'utilisateur</span>
+                <span v-else class="spinner" aria-label="Création…"></span>
               </button>
             </div>
 
@@ -1468,6 +1923,7 @@ onMounted(() => { fetchUsers(); fetchActivities(); fetchTeams(); fetchUserStats(
   padding: var(--sp-5);
   display: flex; flex-direction: column; gap: var(--sp-3);
   transition: box-shadow 200ms;
+  min-height: 140px;
 }
 .role-card:hover { box-shadow: 0 6px 20px oklch(5% 0.01 258 / 0.3); }
 
@@ -1480,7 +1936,16 @@ onMounted(() => { fetchUsers(); fetchActivities(); fetchTeams(); fetchUserStats(
 }
 .role-name  { font-family: var(--font-display); font-size: var(--text-base); font-weight: 700; color: var(--text-primary); }
 .role-users { font-size: var(--text-xs); color: var(--text-muted); }
-.role-desc  { font-size: var(--text-xs); color: var(--text-secondary); line-height: 1.55; }
+.role-desc  { font-size: var(--text-xs); color: var(--text-secondary); line-height: 1.55; flex: 1; }
+
+.role-card-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  padding-top: var(--sp-3);
+  border-top: 1px solid color-mix(in oklch, var(--rc) 20%, var(--border-subtle));
+  margin-top: auto;
+}
 
 /* Permissions matrix */
 .perm-table-wrap { overflow-x: auto; }
@@ -1696,6 +2161,7 @@ onMounted(() => { fetchUsers(); fetchActivities(); fetchTeams(); fetchUserStats(
 .drawer-form { display: flex; flex-direction: column; gap: var(--sp-5); padding: var(--sp-6); flex: 1; }
 .form-field  { display: flex; flex-direction: column; gap: var(--sp-2); }
 .form-label  { font-size: var(--text-sm); font-weight: 600; color: var(--text-secondary); display: flex; align-items: center; gap: 5px; }
+.form-row-2  { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
 .lbl-icon    { color: var(--text-muted); flex-shrink: 0; }
 .req { color: var(--accent-dim); margin-left: 2px; }
 
@@ -1869,6 +2335,61 @@ onMounted(() => { fetchUsers(); fetchActivities(); fetchTeams(); fetchUserStats(
 .form-textarea {
   height: auto !important; padding: var(--sp-3) var(--sp-4) !important;
   resize: vertical;
+}
+
+/* ── System tab ──────────────────────────────────────────── */
+.system-links {
+  display: flex; flex-direction: column; gap: var(--sp-4);
+  padding: var(--sp-2) 0;
+}
+
+.system-section-title {
+  font-size: var(--text-base); font-weight: 700;
+  color: var(--text-primary); margin: 0;
+}
+
+.system-section-desc {
+  font-size: var(--text-sm); color: var(--text-muted);
+  margin: 0;
+}
+
+.system-cards {
+  display: flex; flex-direction: column; gap: var(--sp-3);
+}
+
+.system-card {
+  display: flex; align-items: center; gap: var(--sp-4);
+  padding: var(--sp-4) var(--sp-5);
+  background: var(--surface-overlay);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  text-decoration: none;
+  color: var(--text-primary);
+  transition: background 120ms, border-color 120ms, box-shadow 120ms;
+}
+.system-card:hover {
+  background: var(--surface-raised);
+  border-color: var(--accent-dim);
+  box-shadow: 0 2px 8px var(--shadow-xs);
+}
+
+.system-card-icon {
+  color: var(--accent-dim); flex-shrink: 0;
+}
+
+.system-card-title {
+  font-size: var(--text-sm); font-weight: 600;
+  color: var(--text-primary); margin: 0;
+}
+
+.system-card-desc {
+  font-size: var(--text-xs); color: var(--text-muted);
+  margin: 0 0 0 0;
+}
+
+.system-card-ext {
+  margin-left: auto; flex-shrink: 0;
+  color: var(--text-muted);
 }
 
 /* ── Responsive ──────────────────────────────────────────── */

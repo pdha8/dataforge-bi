@@ -12,7 +12,7 @@ import api from '@/api/axios'
 type SchemaType = 'star' | 'snowflake' | 'galaxy' | 'constellation'
 type SchemaStatus = 'draft' | 'active' | 'archived' | 'deprecated'
 type Grain = 'transaction' | 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly'
-type ActiveTab = 'schemas' | 'galaxies' | 'calculations' | 'hierarchies'
+type ActiveTab = 'schemas' | 'galaxies' | 'calculations' | 'hierarchies' | 'relations'
 
 interface DimensionalSchema {
   id: string
@@ -73,6 +73,32 @@ interface DimensionHierarchy {
   name: string
   dimension_table?: string
   levels?: any[]
+}
+
+interface FactRelationship {
+  id: string
+  name: string
+  description?: string
+  from_fact?: string
+  to_fact?: string
+  from_column?: string
+  to_column?: string
+  relation_type?: string
+  join_type?: string
+  is_enabled: boolean
+  cardinality?: number | null
+}
+
+interface FactRelForm {
+  name: string
+  description: string
+  from_fact: string
+  to_fact: string
+  from_column: string
+  to_column: string
+  relation_type: string
+  join_type: string
+  is_enabled: boolean
 }
 
 interface GlobalStats {
@@ -192,6 +218,16 @@ const showDeleteCalcConfirm = ref(false)
 const deletingCalc = ref<Calculation | null>(null)
 const deleteCalcLoading = ref(false)
 
+// --- Inline per-schema actions ---
+const inlineValidating  = ref<Record<string, boolean>>({})
+const inlineValidResult = ref<Record<string, { is_valid?: boolean; errors?: any[]; error?: string } | null>>({})
+const inlineSqlLoading  = ref<Record<string, boolean>>({})
+const inlineSqlResult   = ref<Record<string, string | null>>({})
+const inlineSqlOpen     = ref<Record<string, boolean>>({})
+const inlineSqlCopied   = ref<Record<string, boolean>>({})
+const inlineCacheLoading = ref<Record<string, boolean>>({})
+const inlineCacheMsg    = ref<Record<string, string>>({})
+
 // --- Hierarchies ---
 const hierarchies = ref<DimensionHierarchy[]>([])
 const hierarchiesLoading = ref(false)
@@ -203,6 +239,18 @@ const editingHierarchyId = ref<string | null>(null)
 const showDeleteHierarchyConfirm = ref(false)
 const deletingHierarchy = ref<DimensionHierarchy | null>(null)
 const deleteHierarchyLoading = ref(false)
+
+// --- FactRelationships ---
+const factRels = ref<FactRelationship[]>([])
+const factRelsLoading = ref(false)
+const showFactRelForm = ref(false)
+const factRelFormMode = ref<'create' | 'edit'>('create')
+const factRelFormLoading = ref(false)
+const factRelForm = ref<FactRelForm>({ name: '', description: '', from_fact: '', to_fact: '', from_column: '', to_column: '', relation_type: 'direct', join_type: 'inner', is_enabled: true })
+const editingFactRelId = ref<string | null>(null)
+const showDeleteFactRelConfirm = ref(false)
+const deletingFactRel = ref<FactRelationship | null>(null)
+const deleteFactRelLoading = ref(false)
 
 // ── Computed ────────────────────────────────────────────────────────────────
 
@@ -423,6 +471,64 @@ async function copySql() {
     copiedSql.value = true
     setTimeout(() => { copiedSql.value = false }, 1500)
   } catch { /* ignore */ }
+}
+
+// ── API: Inline per-schema actions ─────────────────────────────────────────
+
+async function validateSchemaInline(id: string) {
+  inlineValidating.value  = { ...inlineValidating.value,  [id]: true }
+  inlineValidResult.value = { ...inlineValidResult.value, [id]: null }
+  try {
+    const res = await api.post(`/api/star-schema/dimensional-schemas/${id}/validate/`)
+    inlineValidResult.value = { ...inlineValidResult.value, [id]: res.data }
+  } catch (e: any) {
+    inlineValidResult.value = { ...inlineValidResult.value, [id]: { error: e?.response?.data?.detail ?? e.message } }
+  } finally {
+    inlineValidating.value = { ...inlineValidating.value, [id]: false }
+  }
+}
+
+async function generateSqlInline(id: string) {
+  // Toggle : si panel déjà ouvert et SQL déjà chargé, refermer
+  if (inlineSqlOpen.value[id] && inlineSqlResult.value[id]) {
+    inlineSqlOpen.value = { ...inlineSqlOpen.value, [id]: false }
+    return
+  }
+  inlineSqlOpen.value   = { ...inlineSqlOpen.value,   [id]: true }
+  inlineSqlLoading.value = { ...inlineSqlLoading.value, [id]: true }
+  inlineSqlResult.value  = { ...inlineSqlResult.value,  [id]: null }
+  try {
+    const res = await api.get(`/api/star-schema/dimensional-schemas/${id}/sql/`)
+    inlineSqlResult.value = { ...inlineSqlResult.value, [id]: res.data?.sql ?? res.data?.content ?? JSON.stringify(res.data, null, 2) }
+  } catch (e: any) {
+    inlineSqlResult.value = { ...inlineSqlResult.value, [id]: `Erreur: ${e?.response?.data?.detail ?? e.message}` }
+  } finally {
+    inlineSqlLoading.value = { ...inlineSqlLoading.value, [id]: false }
+  }
+}
+
+async function copySqlInline(id: string) {
+  const sql = inlineSqlResult.value[id]
+  if (!sql) return
+  try {
+    await navigator.clipboard.writeText(sql)
+    inlineSqlCopied.value = { ...inlineSqlCopied.value, [id]: true }
+    setTimeout(() => { inlineSqlCopied.value = { ...inlineSqlCopied.value, [id]: false } }, 1500)
+  } catch { /* ignore */ }
+}
+
+async function clearCacheInline(id: string) {
+  inlineCacheLoading.value = { ...inlineCacheLoading.value, [id]: true }
+  inlineCacheMsg.value     = { ...inlineCacheMsg.value,     [id]: '' }
+  try {
+    await api.post(`/api/star-schema/dimensional-schemas/${id}/clear_cache/`)
+    inlineCacheMsg.value = { ...inlineCacheMsg.value, [id]: 'Cache effacé.' }
+  } catch (e: any) {
+    inlineCacheMsg.value = { ...inlineCacheMsg.value, [id]: `Erreur: ${e?.response?.data?.detail ?? e.message}` }
+  } finally {
+    inlineCacheLoading.value = { ...inlineCacheLoading.value, [id]: false }
+    setTimeout(() => { inlineCacheMsg.value = { ...inlineCacheMsg.value, [id]: '' } }, 4000)
+  }
 }
 
 // ── API: Galaxies ───────────────────────────────────────────────────────────
@@ -660,6 +766,73 @@ async function doDeleteHierarchy() {
   }
 }
 
+async function fetchFactRels() {
+  factRelsLoading.value = true
+  try {
+    const { data } = await api.get('/api/star-schema/fact-relationships/')
+    factRels.value = Array.isArray(data?.results) ? data.results : Array.isArray(data) ? data : []
+  } catch {
+    factRels.value = []
+  } finally {
+    factRelsLoading.value = false
+  }
+}
+
+function openEditFactRel(rel: FactRelationship) {
+  factRelFormMode.value = 'edit'
+  editingFactRelId.value = rel.id
+  factRelForm.value = {
+    name: rel.name,
+    description: rel.description || '',
+    from_fact: rel.from_fact || '',
+    to_fact: rel.to_fact || '',
+    from_column: rel.from_column || '',
+    to_column: rel.to_column || '',
+    relation_type: rel.relation_type || 'direct',
+    join_type: rel.join_type || 'inner',
+    is_enabled: rel.is_enabled,
+  }
+  showFactRelForm.value = true
+}
+
+async function saveFactRel() {
+  factRelFormLoading.value = true
+  try {
+    if (editingFactRelId.value) {
+      const { data } = await api.patch(`/api/star-schema/fact-relationships/${editingFactRelId.value}/`, factRelForm.value)
+      const idx = factRels.value.findIndex(r => r.id === editingFactRelId.value)
+      if (idx !== -1) factRels.value[idx] = data
+    } else {
+      const { data } = await api.post('/api/star-schema/fact-relationships/', factRelForm.value)
+      factRels.value.unshift(data)
+    }
+    showFactRelForm.value = false
+    editingFactRelId.value = null
+    factRelFormMode.value = 'create'
+    factRelForm.value = { name: '', description: '', from_fact: '', to_fact: '', from_column: '', to_column: '', relation_type: 'direct', join_type: 'inner', is_enabled: true }
+  } catch { /* ignore */ } finally {
+    factRelFormLoading.value = false
+  }
+}
+
+function confirmDeleteFactRel(rel: FactRelationship) {
+  deletingFactRel.value = rel
+  showDeleteFactRelConfirm.value = true
+}
+
+async function doDeleteFactRel() {
+  if (!deletingFactRel.value) return
+  deleteFactRelLoading.value = true
+  try {
+    await api.delete(`/api/star-schema/fact-relationships/${deletingFactRel.value.id}/`)
+    showDeleteFactRelConfirm.value = false
+    deletingFactRel.value = null
+    await fetchFactRels()
+  } catch { /* ignore */ } finally {
+    deleteFactRelLoading.value = false
+  }
+}
+
 // ── Lifecycle ───────────────────────────────────────────────────────────────
 
 watch(activeTab, (tab) => {
@@ -667,6 +840,7 @@ watch(activeTab, (tab) => {
   if (tab === 'galaxies' && galaxies.value.length === 0) fetchGalaxies()
   if (tab === 'calculations' && calculations.value.length === 0) fetchCalculations()
   if (tab === 'hierarchies' && hierarchies.value.length === 0) fetchHierarchies()
+  if (tab === 'relations' && factRels.value.length === 0) fetchFactRels()
 })
 
 onMounted(() => {
@@ -745,6 +919,16 @@ onMounted(() => {
       >
         <GitMerge :size="14" />
         Hiérarchies
+      </button>
+      <button
+        class="tab-btn"
+        :class="{ 'tab-btn--active': activeTab === 'relations' }"
+        role="tab"
+        :aria-selected="activeTab === 'relations'"
+        @click="activeTab = 'relations'"
+      >
+        <GitMerge :size="14" />
+        Relations
       </button>
     </nav>
 
@@ -855,20 +1039,37 @@ onMounted(() => {
 
               <!-- Actions -->
               <div class="card-actions" @click.stop>
+                <!-- Valider inline -->
                 <button
                   class="icon-btn icon-btn--validate"
-                  title="Valider"
-                  @click="selectSchema(schema); detailTab = 'validate'; validateSchema()"
+                  :title="inlineValidating[schema.id] ? 'Validation…' : 'Valider'"
+                  :disabled="inlineValidating[schema.id]"
+                  @click="validateSchemaInline(schema.id)"
                 >
-                  <CheckCircle :size="14" />
+                  <RefreshCw v-if="inlineValidating[schema.id]" :size="14" class="spin-icon" />
+                  <CheckCircle v-else :size="14" />
                 </button>
+                <!-- Générer SQL inline -->
                 <button
                   class="icon-btn icon-btn--sql"
-                  title="SQL"
-                  @click="selectSchema(schema); detailTab = 'sql'"
+                  :title="inlineSqlOpen[schema.id] ? 'Masquer SQL' : 'Générer SQL'"
+                  :disabled="inlineSqlLoading[schema.id]"
+                  @click="generateSqlInline(schema.id)"
                 >
-                  <Code2 :size="14" />
+                  <RefreshCw v-if="inlineSqlLoading[schema.id]" :size="14" class="spin-icon" />
+                  <Code2 v-else :size="14" />
                 </button>
+                <!-- Vider cache inline -->
+                <button
+                  class="icon-btn"
+                  :title="inlineCacheLoading[schema.id] ? 'Nettoyage…' : 'Vider le cache'"
+                  :disabled="inlineCacheLoading[schema.id]"
+                  @click.stop="clearCacheInline(schema.id)"
+                >
+                  <RefreshCw v-if="inlineCacheLoading[schema.id]" :size="14" class="spin-icon" />
+                  <Archive v-else :size="14" />
+                </button>
+                <!-- Exécuter (ouvre panneau) -->
                 <button
                   class="icon-btn icon-btn--execute"
                   title="Exécuter"
@@ -890,6 +1091,57 @@ onMounted(() => {
                 >
                   <Trash2 :size="14" />
                 </button>
+              </div>
+
+              <!-- Résultat validation inline -->
+              <div
+                v-if="inlineValidResult[schema.id]"
+                class="inline-result"
+                :class="inlineValidResult[schema.id]?.error || inlineValidResult[schema.id]?.is_valid === false
+                  ? 'inline-result--error'
+                  : 'inline-result--success'"
+                @click.stop
+              >
+                <span v-if="inlineValidResult[schema.id]?.error" class="inline-result-text">
+                  {{ inlineValidResult[schema.id]?.error }}
+                </span>
+                <template v-else>
+                  <span class="inline-result-text">
+                    {{ inlineValidResult[schema.id]?.is_valid ? 'Schéma valide' : 'Schéma invalide' }}
+                  </span>
+                  <ul
+                    v-if="Array.isArray(inlineValidResult[schema.id]?.errors) && inlineValidResult[schema.id]!.errors!.length"
+                    class="inline-errors"
+                  >
+                    <li v-for="(err, i) in inlineValidResult[schema.id]!.errors" :key="i">{{ err }}</li>
+                  </ul>
+                </template>
+              </div>
+
+              <!-- Résultat cache inline -->
+              <div v-if="inlineCacheMsg[schema.id]" class="inline-cache-msg" @click.stop>
+                {{ inlineCacheMsg[schema.id] }}
+              </div>
+
+              <!-- SQL inline block -->
+              <div v-if="inlineSqlOpen[schema.id]" class="inline-sql-wrap" @click.stop>
+                <div v-if="inlineSqlLoading[schema.id]" class="panel-loading">
+                  <RefreshCw :size="14" class="spin-icon" />
+                  <span>Génération SQL…</span>
+                </div>
+                <template v-else-if="inlineSqlResult[schema.id]">
+                  <div class="inline-sql-toolbar">
+                    <span class="inline-sql-label">SQL généré</span>
+                    <button class="btn-secondary" style="font-size:0.68rem; padding:3px 10px;" @click="copySqlInline(schema.id)">
+                      <Copy :size="11" />
+                      {{ inlineSqlCopied[schema.id] ? 'Copié !' : 'Copier' }}
+                    </button>
+                    <button class="icon-btn" style="width:22px;height:22px;" title="Fermer" @click="inlineSqlOpen[schema.id] = false">
+                      <X :size="12" />
+                    </button>
+                  </div>
+                  <pre class="sql-block sql-block--compact">{{ inlineSqlResult[schema.id] }}</pre>
+                </template>
               </div>
             </div>
           </div>
@@ -1302,6 +1554,134 @@ onMounted(() => {
     </div>
 
     <!-- ════════════════════════════════════════════════════════════════════ -->
+    <!-- TAB 5: FACT RELATIONSHIPS                                            -->
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <div v-else-if="activeTab === 'relations'" class="tab-body">
+
+      <div class="toolbar">
+        <button class="btn-primary" @click="() => { factRelFormMode = 'create'; editingFactRelId = null; factRelForm = { name: '', description: '', from_fact: '', to_fact: '', from_column: '', to_column: '', relation_type: 'direct', join_type: 'inner', is_enabled: true }; showFactRelForm = true }">
+          <Plus :size="14" />
+          Nouvelle relation
+        </button>
+        <button class="btn-secondary" @click="fetchFactRels">
+          <RefreshCw :size="13" />
+          Actualiser
+        </button>
+      </div>
+
+      <!-- Inline form -->
+      <Transition name="slide-down">
+        <div v-if="showFactRelForm" class="inline-form">
+          <h4 class="inline-form-title">{{ factRelFormMode === 'create' ? 'Nouvelle relation fait-fait' : 'Modifier la relation' }}</h4>
+          <div class="form-grid">
+            <label class="form-field form-field--full">
+              <span class="form-label">Nom *</span>
+              <input v-model="factRelForm.name" type="text" class="form-input" placeholder="Nom de la relation" />
+            </label>
+            <label class="form-field form-field--full">
+              <span class="form-label">Description</span>
+              <input v-model="factRelForm.description" type="text" class="form-input" placeholder="Description optionnelle" />
+            </label>
+            <label class="form-field">
+              <span class="form-label">Table fait source (UUID)</span>
+              <input v-model="factRelForm.from_fact" type="text" class="form-input" placeholder="UUID de la table source" />
+            </label>
+            <label class="form-field">
+              <span class="form-label">Table fait cible (UUID)</span>
+              <input v-model="factRelForm.to_fact" type="text" class="form-input" placeholder="UUID de la table cible" />
+            </label>
+            <label class="form-field">
+              <span class="form-label">Colonne source</span>
+              <input v-model="factRelForm.from_column" type="text" class="form-input" placeholder="colonne_id" />
+            </label>
+            <label class="form-field">
+              <span class="form-label">Colonne cible</span>
+              <input v-model="factRelForm.to_column" type="text" class="form-input" placeholder="colonne_id" />
+            </label>
+            <label class="form-field">
+              <span class="form-label">Type de relation</span>
+              <select v-model="factRelForm.relation_type" class="form-select">
+                <option value="direct">Direct</option>
+                <option value="indirect">Indirect</option>
+              </select>
+            </label>
+            <label class="form-field">
+              <span class="form-label">Type de jointure</span>
+              <select v-model="factRelForm.join_type" class="form-select">
+                <option value="inner">INNER JOIN</option>
+                <option value="left">LEFT JOIN</option>
+                <option value="right">RIGHT JOIN</option>
+                <option value="full">FULL JOIN</option>
+              </select>
+            </label>
+            <label class="form-field form-field--full toggle-label">
+              <input type="checkbox" v-model="factRelForm.is_enabled" class="form-checkbox" />
+              Relation active
+            </label>
+          </div>
+          <div class="form-actions">
+            <button class="btn-ghost" @click="showFactRelForm = false">Annuler</button>
+            <button class="btn-primary" :disabled="factRelFormLoading" @click="saveFactRel">
+              {{ factRelFormLoading ? 'Enregistrement…' : 'Enregistrer' }}
+            </button>
+          </div>
+        </div>
+      </Transition>
+
+      <div v-if="factRelsLoading" class="table-skel">
+        <div v-for="i in 5" :key="i" class="table-skel-row"></div>
+      </div>
+
+      <div v-else-if="factRels.length === 0 && !showFactRelForm" class="empty-state">
+        <GitMerge :size="36" class="empty-icon" />
+        <p>Aucune relation fait-fait définie</p>
+      </div>
+
+      <div v-else-if="factRels.length > 0" class="data-table-wrap">
+        <table class="data-table" aria-label="Relations fait-fait">
+          <thead>
+            <tr>
+              <th class="dt-th">Nom</th>
+              <th class="dt-th">Type relation</th>
+              <th class="dt-th">Jointure</th>
+              <th class="dt-th">Colonnes</th>
+              <th class="dt-th">Statut</th>
+              <th class="dt-th dt-th--actions"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="rel in factRels" :key="rel.id" class="dt-row">
+              <td class="dt-td dt-td--name">{{ rel.name }}</td>
+              <td class="dt-td">
+                <span class="meta-chip">{{ rel.relation_type || '—' }}</span>
+              </td>
+              <td class="dt-td">
+                <span class="meta-chip">{{ rel.join_type?.toUpperCase() || '—' }}</span>
+              </td>
+              <td class="dt-td dt-td--formula">
+                {{ rel.from_column || '—' }} → {{ rel.to_column || '—' }}
+              </td>
+              <td class="dt-td">
+                <span :class="rel.is_enabled ? 'status-badge status--active' : 'status-badge status--draft'">
+                  <span class="status-dot"></span>
+                  {{ rel.is_enabled ? 'Actif' : 'Inactif' }}
+                </span>
+              </td>
+              <td class="dt-td dt-td--actions">
+                <button class="icon-btn" title="Modifier" @click="openEditFactRel(rel)">
+                  <Edit :size="13" />
+                </button>
+                <button class="icon-btn icon-btn--danger" title="Supprimer" @click="confirmDeleteFactRel(rel)">
+                  <Trash2 :size="13" />
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════════════ -->
     <!-- MODAL: Create / Edit Schema                                          -->
     <!-- ════════════════════════════════════════════════════════════════════ -->
     <Transition name="dialog">
@@ -1528,6 +1908,27 @@ onMounted(() => {
             <button class="btn-ghost" @click="showDeleteHierarchyConfirm = false">Annuler</button>
             <button class="btn-danger" :disabled="deleteHierarchyLoading" @click="doDeleteHierarchy">
               {{ deleteHierarchyLoading ? 'Suppression…' : 'Supprimer' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- Delete FactRelationship -->
+    <Transition name="dialog">
+      <div v-if="showDeleteFactRelConfirm" class="dialog-overlay" @click.self="showDeleteFactRelConfirm = false">
+        <div class="dialog dialog--sm" role="dialog" aria-modal="true">
+          <div class="dialog-header">
+            <h3 class="dialog-title">Supprimer la relation</h3>
+            <button class="dialog-close" @click="showDeleteFactRelConfirm = false"><X :size="16" /></button>
+          </div>
+          <p class="dialog-confirm-body">
+            Êtes-vous sûr de vouloir supprimer <strong>{{ deletingFactRel?.name }}</strong>&nbsp;?
+          </p>
+          <div class="dialog-footer">
+            <button class="btn-ghost" @click="showDeleteFactRelConfirm = false">Annuler</button>
+            <button class="btn-danger" :disabled="deleteFactRelLoading" @click="doDeleteFactRel">
+              {{ deleteFactRelLoading ? 'Suppression…' : 'Supprimer' }}
             </button>
           </div>
         </div>
@@ -2486,6 +2887,61 @@ onMounted(() => {
 .slide-down-enter-to     { opacity: 1; max-height: 600px; }
 .slide-down-leave-from   { opacity: 1; max-height: 600px; }
 .slide-down-leave-to     { opacity: 0; max-height: 0; }
+
+/* ── Inline action results (per-card) ─────────────────────────────────────── */
+.inline-result {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  padding: var(--sp-2) var(--sp-3);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  line-height: 1.5;
+}
+.inline-result--success {
+  background: oklch(11% 0.03 148);
+  border-color: oklch(25% 0.07 148);
+  color: oklch(65% 0.15 148);
+}
+.inline-result--error {
+  background: oklch(11% 0.04 0);
+  border-color: oklch(28% 0.08 0);
+  color: var(--error);
+}
+.inline-result-text { display: block; }
+.inline-errors {
+  margin: var(--sp-1) 0 0 var(--sp-3);
+  padding: 0;
+  list-style: disc;
+  font-size: 0.68rem;
+  opacity: 0.9;
+}
+
+.inline-cache-msg {
+  font-size: var(--text-xs);
+  color: var(--success);
+  font-weight: 500;
+  padding: var(--sp-1) 0;
+}
+
+.inline-sql-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.inline-sql-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.inline-sql-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+  flex: 1;
+}
 
 /* ── Responsive ────────────────────────────────────────────────────────────── */
 @media (max-width: 1200px) {

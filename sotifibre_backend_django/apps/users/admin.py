@@ -6,6 +6,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.db import models
 from django.utils.html import format_html
+from django.utils.safestring import mark_safe
 from django.urls import reverse
 from django.utils import timezone
 from django.contrib import messages
@@ -173,7 +174,7 @@ class UserAdmin(BaseUserAdmin, ImportExportModelAdmin):
         if obj.failed_login_attempts > 0:
             icons.append(f'<span class="badge bg-warning" title="{obj.failed_login_attempts} échecs">⚠️</span>')
         
-        return format_html(' '.join(icons)) if icons else '-'
+        return mark_safe(' '.join(icons)) if icons else '-'
     security_icons.short_description = 'Sécurité'
     
     def api_status(self, obj):
@@ -183,7 +184,7 @@ class UserAdmin(BaseUserAdmin, ImportExportModelAdmin):
                 '<span class="badge bg-success">✓ {} req/h</span>',
                 obj.api_rate_limit
             )
-        return format_html('<span class="badge bg-secondary">✗</span>')
+        return mark_safe('<span class="badge bg-secondary">✗</span>')
     api_status.short_description = 'API'
     
     def last_activity(self, obj):

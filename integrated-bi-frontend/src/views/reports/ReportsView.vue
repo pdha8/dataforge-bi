@@ -788,34 +788,50 @@ onMounted(() => {
               <label class="form-label" for="f-sched">
                 Planification CRON <span class="opt">optionnel</span>
               </label>
+              <!-- CRON preset picker -->
+              <div class="cron-presets">
+                <button
+                  v-for="preset in [
+                    { label: 'Manuel',      cron: '' },
+                    { label: '15 min',      cron: '*/15 * * * *' },
+                    { label: 'Horaire',     cron: '0 * * * *' },
+                    { label: 'Quotidien',   cron: '0 9 * * *' },
+                    { label: 'Lun-Ven 9h', cron: '0 9 * * 1-5' },
+                    { label: 'Hebdomad.',   cron: '0 9 * * 1' },
+                    { label: 'Mensuel',     cron: '0 9 1 * *' },
+                  ]"
+                  :key="preset.label"
+                  type="button"
+                  class="cron-preset-btn"
+                  :class="{ 'cron-preset-btn--active': form.schedule === preset.cron }"
+                  @click="form.schedule = preset.cron"
+                >{{ preset.label }}</button>
+              </div>
               <input
                 id="f-sched"
                 v-model="form.schedule"
                 class="form-input form-input--mono"
                 type="text"
-                placeholder="0 9 * * * (CRON)"
+                placeholder="0 9 * * * (expression CRON personnalisée)"
               />
-              <button
-                type="button"
-                class="hint-btn"
-                @click="form.schedule = '0 9 * * 1-5'"
-              >
-                Lun-Ven à 9h : <code>0 9 * * 1-5</code>
-              </button>
             </div>
 
             <!-- recipients -->
             <div class="form-field">
-              <label class="form-label" for="f-recip">
-                Destinataires <span class="opt">une adresse par ligne</span>
-              </label>
+              <div class="recip-label-row">
+                <label class="form-label" for="f-recip">Destinataires</label>
+                <span class="recip-count">
+                  {{ form.recipients.split('\n').filter(l => l.trim()).length }} adresse{{ form.recipients.split('\n').filter(l => l.trim()).length !== 1 ? 's' : '' }}
+                </span>
+              </div>
               <textarea
                 id="f-recip"
                 v-model="form.recipients"
                 class="form-textarea form-textarea--mono"
-                placeholder="utilisateur@exemple.com&#10;autre@exemple.com"
-                rows="3"
+                placeholder="utilisateur@exemple.com&#10;autre@exemple.com&#10;equipe@societe.com"
+                rows="4"
               />
+              <p class="form-hint">Une adresse e-mail par ligne. Les lignes vides sont ignorées.</p>
             </div>
 
             <!-- checkboxes row -->
@@ -1769,6 +1785,32 @@ onMounted(() => {
   font-family: var(--font-display);
   letter-spacing: 0.02em;
 }
+
+/* CRON presets */
+.cron-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1);
+  margin-bottom: var(--sp-2);
+}
+.cron-preset-btn {
+  padding: var(--sp-1) var(--sp-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--surface-overlay);
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  cursor: pointer;
+  transition: all 120ms;
+}
+.cron-preset-btn:hover { border-color: var(--accent); color: var(--accent); }
+.cron-preset-btn--active { background: var(--accent-surface); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+
+/* Recipients */
+.recip-label-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--sp-1); }
+.recip-count { font-size: var(--text-xs); color: var(--accent); font-weight: 600; }
+.form-hint { font-size: var(--text-xs); color: var(--text-muted); margin-top: var(--sp-1); }
 
 /* CRON hint button */
 .hint-btn {

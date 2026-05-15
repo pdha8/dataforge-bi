@@ -189,7 +189,7 @@ class WidgetViewSet(viewsets.ModelViewSet):
 class KPIViewSet(viewsets.ModelViewSet):
     """ViewSet pour KPI"""
     
-    queryset = KPI.objects.all().select_related('dimensional_schema', 'measure', 'dashboard', 'owner')
+    queryset = KPI.objects.all().select_related('dimensional_schema', 'measure', 'dashboard')
     serializer_class = KPISerializer
     permission_classes = [IsAuthenticated, CanManageDataSources]
     pagination_class = StandardPagination

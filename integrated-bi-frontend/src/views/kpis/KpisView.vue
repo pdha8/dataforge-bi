@@ -34,6 +34,9 @@ interface KpiDef {
   sparkline: number[]
   updated_at: string
   description?: string
+  warning_threshold?: number | null
+  critical_threshold?: number | null
+  format_string?: string | null
 }
 
 // ── Domain metadata ────────────────────────────────────────
@@ -105,7 +108,32 @@ const editKpi       = ref<KpiDef | null>(null)
 const form = ref({
   name: '', domain: 'number' as string,
   value: '', target: '', unit: '', description: '',
+  warning_threshold: '', critical_threshold: '',
+  formula: '', format_string: '', decimal_places: '2',
+  track_trend: false, trend_period: 'monthly',
+  dimensional_schema: '' as string,
+  measure: '' as string,
 })
+
+// ── Lookup data for pickers ────────────────────────────────
+interface SchemaOption { id: string; name: string }
+interface MeasureOption { id: string; name: string; fact_table_name?: string }
+const schemaOptions  = ref<SchemaOption[]>([])
+const measureOptions = ref<MeasureOption[]>([])
+
+async function fetchPickerData() {
+  try {
+    const [schRes, msRes] = await Promise.all([
+      api.get('/api/star-schema/dimensional-schemas/', { params: { per_page: 200 } }),
+      api.get('/api/data-warehouse/measures/', { params: { per_page: 200 } }),
+    ])
+    const schRows = Array.isArray(schRes.data?.results) ? schRes.data.results : Array.isArray(schRes.data) ? schRes.data : []
+    schemaOptions.value = schRows.map((s: any) => ({ id: s.id, name: s.name }))
+
+    const msRows = Array.isArray(msRes.data?.results) ? msRes.data.results : Array.isArray(msRes.data) ? msRes.data : []
+    measureOptions.value = msRows.map((m: any) => ({ id: m.id, name: m.name, fact_table_name: m.fact_table_name || undefined }))
+  } catch { /* ignore */ }
+}
 
 // ── Filter tabs ────────────────────────────────────────────
 type ActiveFilter = 'all' | 'critical' | 'warning'
@@ -210,7 +238,13 @@ async function deleteKpi(id: string | number) {
 
 function openDrawer() {
   editKpi.value = null
-  form.value = { name: '', domain: 'ventes', value: '', target: '', unit: '', description: '' }
+  form.value = {
+    name: '', domain: 'ventes', value: '', target: '', unit: '', description: '',
+    warning_threshold: '', critical_threshold: '',
+    formula: '', format_string: '', decimal_places: '2',
+    track_trend: false, trend_period: 'monthly',
+    dimensional_schema: '', measure: '',
+  }
   drawerOpen.value = true
 }
 
@@ -223,6 +257,11 @@ function openEdit(kpi: KpiDef) {
     target: String(kpi.target),
     unit: kpi.unit,
     description: kpi.description || '',
+    warning_threshold: '', critical_threshold: '',
+    formula: '', format_string: '', decimal_places: '2',
+    track_trend: false, trend_period: 'monthly',
+    dimensional_schema: (kpi as any).dimensional_schema || '',
+    measure: (kpi as any).measure || '',
   }
   drawerOpen.value = true
 }
@@ -231,23 +270,27 @@ async function submitForm() {
   if (!form.value.name.trim() || !form.value.target) return
   submitting.value = true
   const t = parseFloat(form.value.target)
+  const payload: Record<string, any> = {
+    name:              form.value.name,
+    kpi_type:          form.value.domain || 'number',
+    target_value:      t,
+    unit:              form.value.unit,
+    description:       form.value.description,
+    formula:           form.value.formula || null,
+    format_string:     form.value.format_string || null,
+    decimal_places:    form.value.decimal_places ? parseInt(form.value.decimal_places) : 2,
+    track_trend:       form.value.track_trend,
+    trend_period:      form.value.trend_period,
+  }
+  if (form.value.warning_threshold)   payload.warning_threshold  = parseFloat(form.value.warning_threshold)
+  if (form.value.critical_threshold)  payload.critical_threshold = parseFloat(form.value.critical_threshold)
+  if (form.value.dimensional_schema)  payload.dimensional_schema = form.value.dimensional_schema
+  if (form.value.measure)             payload.measure            = form.value.measure
   try {
     if (editKpi.value) {
-      await api.patch(`/api/visualizations/kpis/${editKpi.value.id}/`, {
-        name:         form.value.name,
-        kpi_type:     form.value.domain,
-        target_value: t,
-        unit:         form.value.unit,
-        description:  form.value.description,
-      })
+      await api.patch(`/api/visualizations/kpis/${editKpi.value.id}/`, payload)
     } else {
-      await api.post('/api/visualizations/kpis/', {
-        name:         form.value.name,
-        kpi_type:     form.value.domain || 'number',
-        target_value: t,
-        unit:         form.value.unit,
-        description:  form.value.description,
-      })
+      await api.post('/api/visualizations/kpis/', payload)
     }
     await fetchKpis()
   } catch {
@@ -262,18 +305,21 @@ async function submitForm() {
 function mapKpi(k: any): KpiDef {
   const statusMap: Record<string, string> = { success: 'achieved', warning: 'at_risk', critical: 'critical' }
   return {
-    id:          k.id,
-    name:        k.name,
-    domain:      k.kpi_type || 'number',
-    value:       k.current_value ?? 0,
-    target:      k.target_value ?? 1,
-    unit:        k.unit || '',
-    trend_dir:   k.trend_direction || 'stable',
-    trend_pct:   k.trend_percentage ?? 0,
-    status:      statusMap[k.status] ?? k.status ?? 'on_track',
-    sparkline:   [],
-    updated_at:  k.updated_at || k.last_calculated || new Date().toISOString(),
-    description: k.description,
+    id:                 k.id,
+    name:               k.name,
+    domain:             k.kpi_type || 'number',
+    value:              k.current_value ?? 0,
+    target:             k.target_value ?? 1,
+    unit:               k.unit || '',
+    trend_dir:          k.trend_direction || 'stable',
+    trend_pct:          k.trend_percentage ?? 0,
+    status:             statusMap[k.status] ?? k.status ?? 'on_track',
+    sparkline:          [],
+    updated_at:         k.updated_at || k.last_calculated || new Date().toISOString(),
+    description:        k.description,
+    warning_threshold:  k.warning_threshold ?? null,
+    critical_threshold: k.critical_threshold ?? null,
+    format_string:      k.format_string ?? null,
   }
 }
 
@@ -333,7 +379,7 @@ async function calculateKpi(kpi: KpiDef) {
   }
 }
 
-onMounted(fetchKpis)
+onMounted(() => { fetchKpis(); fetchPickerData() })
 </script>
 
 <template>
@@ -619,6 +665,9 @@ onMounted(fetchKpis)
             <span>Progression</span>
             <span>Tendance</span>
             <span>Statut</span>
+            <span>Alerte</span>
+            <span>Critique</span>
+            <span>Format</span>
             <span>Mis à jour</span>
             <span></span>
           </div>
@@ -670,6 +719,19 @@ onMounted(fetchKpis)
               <component :is="STATUS_META[kpi.status].icon" :size="10" />
               {{ STATUS_META[kpi.status].label }}
             </span>
+
+            <!-- Warning threshold -->
+            <span class="list-threshold list-threshold--warn">
+              {{ kpi.warning_threshold != null ? kpi.warning_threshold : '—' }}
+            </span>
+
+            <!-- Critical threshold -->
+            <span class="list-threshold list-threshold--crit">
+              {{ kpi.critical_threshold != null ? kpi.critical_threshold : '—' }}
+            </span>
+
+            <!-- Format string -->
+            <span class="list-fmt">{{ kpi.format_string || '—' }}</span>
 
             <!-- Time -->
             <span class="list-time">{{ timeAgo(kpi.updated_at) }}</span>
@@ -777,6 +839,85 @@ onMounted(fetchKpis)
                 <input id="f-unit" v-model="form.unit" class="form-input" type="text" placeholder="%, €, j…" />
               </div>
             </div>
+
+            <!-- Thresholds -->
+            <div class="form-row-3">
+              <div class="form-field">
+                <label class="form-label">Seuil alerte</label>
+                <input v-model="form.warning_threshold" class="form-input" type="number" step="any" placeholder="80" />
+              </div>
+              <div class="form-field">
+                <label class="form-label">Seuil critique</label>
+                <input v-model="form.critical_threshold" class="form-input" type="number" step="any" placeholder="60" />
+              </div>
+              <div class="form-field">
+                <label class="form-label">Décimales</label>
+                <input v-model="form.decimal_places" class="form-input" type="number" min="0" max="6" placeholder="2" />
+              </div>
+            </div>
+
+            <!-- Advanced options -->
+            <details class="kpi-adv-section">
+              <summary class="kpi-adv-summary">Options avancées</summary>
+              <div class="kpi-adv-body">
+
+                <div class="form-field">
+                  <label class="form-label">Schéma dimensionnel <span class="opt">optionnel</span></label>
+                  <div class="select-wrap">
+                    <select v-model="form.dimensional_schema" class="filter-select">
+                      <option value="">— Aucun —</option>
+                      <option v-for="s in schemaOptions" :key="s.id" :value="s.id">{{ s.name }}</option>
+                    </select>
+                    <ChevronDown :size="13" class="select-arrow" />
+                  </div>
+                </div>
+
+                <div class="form-field">
+                  <label class="form-label">Mesure source <span class="opt">optionnel</span></label>
+                  <div class="select-wrap">
+                    <select v-model="form.measure" class="filter-select">
+                      <option value="">— Aucune —</option>
+                      <option v-for="m in measureOptions" :key="m.id" :value="m.id">
+                        {{ m.fact_table_name ? `${m.fact_table_name} → ` : '' }}{{ m.name }}
+                      </option>
+                    </select>
+                    <ChevronDown :size="13" class="select-arrow" />
+                  </div>
+                </div>
+
+                <div class="form-field">
+                  <label class="form-label">Formule de calcul <span class="opt">optionnel</span></label>
+                  <input v-model="form.formula" class="form-input" type="text" placeholder="Ex : sum(valeur_ventes) / count(commandes)" />
+                </div>
+
+                <div class="form-field">
+                  <label class="form-label">Format d'affichage <span class="opt">optionnel</span></label>
+                  <input v-model="form.format_string" class="form-input" type="text" placeholder="Ex : {value:.1f}%" />
+                </div>
+
+                <div class="kpi-adv-row">
+                  <label class="toggle-label">
+                    <input v-model="form.track_trend" type="checkbox" class="form-checkbox" />
+                    <span>Suivre la tendance</span>
+                  </label>
+
+                  <div v-if="form.track_trend" class="form-field">
+                    <label class="form-label">Période de tendance</label>
+                    <div class="select-wrap">
+                      <select v-model="form.trend_period" class="filter-select">
+                        <option value="daily">Quotidien</option>
+                        <option value="weekly">Hebdomadaire</option>
+                        <option value="monthly">Mensuel</option>
+                        <option value="quarterly">Trimestriel</option>
+                        <option value="yearly">Annuel</option>
+                      </select>
+                      <ChevronDown :size="13" class="select-arrow" />
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </details>
 
             <div class="drawer-footer">
               <button type="button" class="btn-ghost" @click="drawerOpen = false; editKpi = null">Annuler</button>
@@ -1204,7 +1345,7 @@ onMounted(fetchKpis)
 
 .list-head {
   display: grid;
-  grid-template-columns: 1fr 90px 100px 90px 140px 90px 90px 90px 90px;
+  grid-template-columns: 1fr 90px 100px 90px 140px 90px 90px 72px 72px 80px 90px 90px;
   padding: var(--sp-2) var(--sp-5);
   background: var(--surface-overlay);
   border-bottom: 1px solid var(--border-subtle);
@@ -1216,7 +1357,7 @@ onMounted(fetchKpis)
 
 .list-row {
   display: grid;
-  grid-template-columns: 1fr 90px 100px 90px 140px 90px 90px 90px 90px;
+  grid-template-columns: 1fr 90px 100px 90px 140px 90px 90px 72px 72px 80px 90px 90px;
   align-items: center; gap: var(--sp-3);
   padding: var(--sp-3) var(--sp-5);
   background: var(--surface-raised);
@@ -1253,6 +1394,10 @@ onMounted(fetchKpis)
 }
 
 .list-time    { font-size: var(--text-xs); color: var(--text-muted); }
+.list-threshold { font-size: var(--text-xs); font-variant-numeric: tabular-nums; }
+.list-threshold--warn { color: oklch(78% 0.14 80); }
+.list-threshold--crit { color: oklch(64% 0.19 24); }
+.list-fmt { font-size: var(--text-xs); color: var(--text-muted); font-family: var(--font-mono, monospace); }
 
 .list-actions { display: flex; align-items: center; gap: var(--sp-1); justify-content: flex-end; }
 
@@ -1353,12 +1498,30 @@ onMounted(fetchKpis)
 .drawer-anim-leave-active .drawer { transition: transform 220ms cubic-bezier(0.4, 0, 1, 1); }
 .drawer-anim-enter-from .drawer, .drawer-anim-leave-to .drawer { transform: translateX(100%); }
 
+/* ── KPI Advanced section ────────────────────────────────── */
+.kpi-adv-section { border: 1px solid var(--border-subtle); border-radius: var(--radius-md); overflow: hidden; }
+.kpi-adv-summary {
+  padding: var(--sp-3) var(--sp-4);
+  font-size: var(--text-sm); font-weight: 600; color: var(--text-secondary);
+  cursor: pointer; list-style: none; display: flex; align-items: center;
+  background: var(--surface-overlay);
+}
+.kpi-adv-summary::-webkit-details-marker { display: none; }
+.kpi-adv-summary::after { content: ' ›'; color: var(--text-muted); transition: transform 200ms; }
+details[open] .kpi-adv-summary::after { content: ' ‹'; }
+.kpi-adv-body { padding: var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-4); }
+.kpi-adv-row { display: flex; flex-direction: column; gap: var(--sp-3); }
+.form-checkbox { accent-color: var(--accent); width: 14px; height: 14px; cursor: pointer; }
+.toggle-label { display: flex; align-items: center; gap: var(--sp-2); font-size: var(--text-sm); color: var(--text-secondary); cursor: pointer; }
+
 /* ── Responsive ──────────────────────────────────────────── */
 @media (max-width: 1400px) { .kpi-grid { grid-template-columns: repeat(3, 1fr); } }
 @media (max-width: 1100px) {
   .kpi-grid { grid-template-columns: repeat(2, 1fr); }
   .list-head, .list-row { grid-template-columns: 1fr 80px 90px 80px 120px 80px 80px 80px; }
   .list-head span:nth-child(4), .list-row .list-target { display: none; }
+  .list-head span:nth-child(8), .list-head span:nth-child(9), .list-head span:nth-child(10),
+  .list-row .list-threshold, .list-row .list-fmt { display: none; }
 }
 @media (max-width: 900px) {
   .kpi-page { padding: var(--sp-6); gap: var(--sp-4); }

@@ -13,7 +13,7 @@ const { collapsed } = useSidebar()
       <AppHeader />
       <main class="app-content">
         <RouterView v-slot="{ Component, route }">
-          <Transition name="page-fade" mode="out-in">
+          <Transition name="page-fade">
             <component :is="Component" :key="route.path" />
           </Transition>
         </RouterView>
@@ -45,12 +45,21 @@ const { collapsed } = useSidebar()
   flex: 1;
   overflow-y: auto;
   background-color: var(--surface-base);
+  position: relative;
 }
 
-/* Page transition */
-.page-fade-enter-active,
+/* Page transition — leave element is absolutely positioned so the entering
+   component is already in the DOM; the container never collapses to zero height */
+.page-fade-enter-active {
+  transition: opacity 160ms ease 80ms, transform 160ms var(--ease-out-quart) 80ms;
+}
 .page-fade-leave-active {
   transition: opacity 160ms ease, transform 160ms var(--ease-out-quart);
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  pointer-events: none;
 }
 .page-fade-enter-from {
   opacity: 0;

@@ -192,7 +192,7 @@ class DataSourceAdmin(ImportExportModelAdmin):
         return format_html(
             '<div><span class="badge bg-{}">{:.0f}%</span></div>'
             '<div><small>{}</small></div>',
-            color, success_rate, obj.total_queries
+            color, float(success_rate), obj.total_queries
         )
     metrics_info.short_description = 'Métriques'
     

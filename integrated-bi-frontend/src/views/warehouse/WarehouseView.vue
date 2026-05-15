@@ -5,6 +5,7 @@ import {
   Key, Search, ChevronRight, ChevronDown, RefreshCcw,
   Copy, Check, Columns, Info, BarChart2, Loader2,
   CheckCircle2, AlertTriangle, Tag, Layers,
+  Plus, Pencil, Trash2, X, Activity, Clock, Filter,
 } from 'lucide-vue-next'
 import api from '@/api/axios'
 
@@ -27,6 +28,7 @@ interface TableDef {
 }
 
 interface Schema {
+  id?: string
   name: string
   tables: TableDef[]
 }
@@ -47,6 +49,71 @@ interface Attribute {
   is_key: boolean
   is_hierarchical: boolean
   is_active: boolean
+}
+
+// ── New types: Fact Table (dedicated tab) ─────────────────
+interface FactTableRow {
+  id: number | string
+  name: string
+  description?: string
+  schema: string | number
+  schema_name: string
+  row_count: number
+  size_bytes: number
+  column_count: number
+  measures_count: number
+  granularity: string
+  granularity_display: string
+  status: string
+  is_partitioned: boolean
+  scd_type?: number
+  dimension_type?: string
+  is_compressed: boolean
+  last_refresh?: string
+  tags: string[]
+}
+
+interface FactMeasure {
+  id?: number | string
+  name: string
+  expression: string
+  aggregation_type: string
+  description?: string
+}
+
+// ── New types: Aggregation ────────────────────────────────
+interface AggregationRow {
+  id: number | string
+  name: string
+  base_table: number | string
+  base_table_name: string
+  granularity: string
+  granularity_display: string
+  row_count: number
+  size_bytes: number
+  compression_ratio: number
+  refresh_frequency: string
+  last_refresh?: string
+}
+
+// ── New types: Monitoring ─────────────────────────────────
+interface DwhLog {
+  id: number | string
+  level: string
+  message: string
+  table_name?: string
+  execution_time_ms?: number
+  rows_affected?: number
+  created_at: string
+}
+
+interface DwhMetric {
+  id?: number | string
+  [key: string]: any
+}
+
+interface LogStats {
+  [key: string]: any
 }
 
 // ── Mapping helpers ───────────────────────────────────────
@@ -71,6 +138,9 @@ function mapDimTable(t: any): TableDef {
     description:  t.description || undefined,
   }
 }
+
+// ── Main page tab ─────────────────────────────────────────
+const mainTab = ref<'explorer' | 'fact-tables' | 'aggregations' | 'monitoring'>('explorer')
 
 // ── State ─────────────────────────────────────────────────
 const schemas        = ref<Schema[]>([])
@@ -100,6 +170,66 @@ const rightPanelLoading= ref(false)
 const tableActionLoading = ref<string | null>(null)   // 'refresh'|'analyze'|'optimize'|null
 const tableActionMsg     = ref('')
 const showOptimizeDialog = ref(false)
+
+// ── State: Fact Tables tab ────────────────────────────────
+const ftRows          = ref<FactTableRow[]>([])
+const ftLoading       = ref(false)
+const ftLoaded        = ref(false)
+const ftSearch        = ref('')
+const ftSchemaFilter  = ref('')
+const ftSelectedId    = ref<number | string | null>(null)
+const ftMeasures      = ref<FactMeasure[]>([])
+const ftMeasuresLoading = ref(false)
+const ftActionLoading = ref<Record<string | number, string | null>>({})
+const ftActionMsg     = ref<Record<string | number, string>>({})
+const ftShowAddMeasure = ref(false)
+const ftMeasureForm   = ref({ name: '', expression: '', aggregation_type: 'SUM', description: '' })
+const ftMeasureSubmitting = ref(false)
+
+const ftSelected = computed(() =>
+  ftRows.value.find(r => r.id === ftSelectedId.value) ?? null
+)
+
+const ftFiltered = computed(() => {
+  let rows = ftRows.value
+  if (ftSchemaFilter.value) rows = rows.filter(r => r.schema_name === ftSchemaFilter.value)
+  if (ftSearch.value) {
+    const q = ftSearch.value.toLowerCase()
+    rows = rows.filter(r => r.name.toLowerCase().includes(q) || r.schema_name.toLowerCase().includes(q))
+  }
+  return rows
+})
+
+const ftSchemaOptions = computed(() => {
+  const s = new Set(ftRows.value.map(r => r.schema_name))
+  return Array.from(s)
+})
+
+// ── State: Aggregations tab ───────────────────────────────
+const aggRows         = ref<AggregationRow[]>([])
+const aggLoading      = ref(false)
+const aggLoaded       = ref(false)
+const aggGranularity  = ref('')
+
+const aggFiltered = computed(() => {
+  if (!aggGranularity.value) return aggRows.value
+  return aggRows.value.filter(r => r.granularity === aggGranularity.value)
+})
+
+// ── State: Monitoring tab ─────────────────────────────────
+const monLogs         = ref<DwhLog[]>([])
+const monLogsLoading  = ref(false)
+const monLoaded       = ref(false)
+const monMetrics      = ref<DwhMetric[]>([])
+const monLatestMetric = ref<DwhMetric | null>(null)
+const monLogStats     = ref<LogStats>({})
+const monLevelFilter  = ref('')
+const monMetricsLoading = ref(false)
+
+const monFilteredLogs = computed(() => {
+  if (!monLevelFilter.value) return monLogs.value
+  return monLogs.value.filter(l => l.level.toUpperCase() === monLevelFilter.value.toUpperCase())
+})
 
 // ── Computed ──────────────────────────────────────────────
 const activeSchemas = computed(() =>
@@ -235,6 +365,7 @@ async function fetchWarehouse() {
     }
 
     schemas.value = schemaRows.map(s => ({
+      id:     s.id as string | undefined,
       name:   s.name || '',
       tables: tablesBySchema[s.id] ?? [],
     }))
@@ -343,6 +474,263 @@ async function doTableAction(action: 'refresh' | 'analyze' | 'optimize') {
   }
 }
 
+// ── Helpers: status / level badges ───────────────────────
+function statusClass(status: string): string {
+  const s = (status || '').toLowerCase()
+  if (s === 'active' || s === 'ready') return 'badge--active'
+  if (s === 'draft' || s === 'pending') return 'badge--draft'
+  if (s === 'deprecated' || s === 'error') return 'badge--error'
+  if (s === 'archived') return 'badge--archived'
+  return 'badge--neutral'
+}
+
+function levelClass(level: string): string {
+  const l = (level || '').toUpperCase()
+  if (l === 'ERROR' || l === 'CRITICAL') return 'level--error'
+  if (l === 'WARNING' || l === 'WARN')   return 'level--warn'
+  if (l === 'INFO')                       return 'level--info'
+  if (l === 'DEBUG')                      return 'level--debug'
+  return 'level--neutral'
+}
+
+function fmtBytes(b: number): string {
+  if (!b) return '—'
+  if (b >= 1_073_741_824) return `${(b / 1_073_741_824).toFixed(1)} GB`
+  if (b >= 1_048_576)     return `${(b / 1_048_576).toFixed(1)} MB`
+  if (b >= 1_024)         return `${(b / 1_024).toFixed(1)} KB`
+  return `${b} B`
+}
+
+function fmtMs(ms?: number): string {
+  if (ms == null) return '—'
+  if (ms >= 1000) return `${(ms / 1000).toFixed(2)} s`
+  return `${ms} ms`
+}
+
+function fmtDateTime(dateStr?: string): string {
+  if (!dateStr) return '—'
+  const d = new Date(dateStr)
+  return d.toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'medium' })
+}
+
+// ── API: Fact Tables tab ──────────────────────────────────
+async function fetchFactTablesList() {
+  if (ftLoaded.value) return
+  ftLoading.value = true
+  try {
+    const res = await api.get('/api/data-warehouse/fact-tables/', {
+      params: { per_page: 100 },
+    })
+    const rows: any[] = Array.isArray(res.data?.results) ? res.data.results
+                      : Array.isArray(res.data)          ? res.data
+                      : []
+    ftRows.value = rows.map((r: any) => ({
+      id:               r.id,
+      name:             r.name || '',
+      description:      r.description || undefined,
+      schema:           r.schema,
+      schema_name:      r.schema_name || r.schema || '',
+      row_count:        r.row_count ?? 0,
+      size_bytes:       r.size_bytes ?? 0,
+      column_count:     r.column_count ?? 0,
+      measures_count:   r.measures_count ?? 0,
+      granularity:      r.granularity || '',
+      granularity_display: r.granularity_display || r.granularity || '—',
+      status:           r.status || '',
+      is_partitioned:   r.is_partitioned ?? false,
+      scd_type:         r.scd_type ?? undefined,
+      dimension_type:   r.dimension_type || undefined,
+      is_compressed:    r.is_compressed ?? false,
+      last_refresh:     r.last_refresh || undefined,
+      tags:             Array.isArray(r.tags) ? r.tags : [],
+    }))
+    ftLoaded.value = true
+  } catch {
+    ftRows.value = []
+  } finally {
+    ftLoading.value = false
+  }
+}
+
+async function ftLoadMeasures(id: number | string) {
+  ftMeasures.value = []
+  ftMeasuresLoading.value = true
+  try {
+    const res = await api.get(`/api/data-warehouse/fact-tables/${id}/measures/`)
+    const rows: any[] = Array.isArray(res.data?.results) ? res.data.results
+                      : Array.isArray(res.data)          ? res.data
+                      : []
+    ftMeasures.value = rows.map((m: any) => ({
+      id:               m.id,
+      name:             m.name || '',
+      expression:       m.expression || '',
+      aggregation_type: m.aggregation_type || m.aggregation_type_display || '',
+      description:      m.description || undefined,
+    }))
+  } catch {
+    ftMeasures.value = []
+  } finally {
+    ftMeasuresLoading.value = false
+  }
+}
+
+function selectFactTable(id: number | string) {
+  if (ftSelectedId.value === id) {
+    ftSelectedId.value = null
+    ftMeasures.value = []
+    ftShowAddMeasure.value = false
+    return
+  }
+  ftSelectedId.value = id
+  ftShowAddMeasure.value = false
+  ftMeasureForm.value = { name: '', expression: '', aggregation_type: 'SUM', description: '' }
+  ftLoadMeasures(id)
+}
+
+async function ftDoAction(id: number | string, action: 'analyze' | 'optimize' | 'refresh') {
+  if (!ftActionLoading.value[id]) ftActionLoading.value[id] = null
+  ftActionLoading.value = { ...ftActionLoading.value, [id]: action }
+  ftActionMsg.value = { ...ftActionMsg.value, [id]: '' }
+  try {
+    await api.post(`/api/data-warehouse/fact-tables/${id}/${action}/`)
+    const labels: Record<string, string> = {
+      refresh:  'Rafraîchissement effectué.',
+      analyze:  'Analyse terminée.',
+      optimize: 'Optimisation terminée.',
+    }
+    ftActionMsg.value = { ...ftActionMsg.value, [id]: labels[action] ?? 'OK' }
+    setTimeout(() => {
+      ftActionMsg.value = { ...ftActionMsg.value, [id]: '' }
+    }, 4000)
+    // Reload list to reflect changes
+    ftLoaded.value = false
+    await fetchFactTablesList()
+  } catch {
+    ftActionMsg.value = { ...ftActionMsg.value, [id]: 'Erreur.' }
+    setTimeout(() => {
+      ftActionMsg.value = { ...ftActionMsg.value, [id]: '' }
+    }, 4000)
+  } finally {
+    ftActionLoading.value = { ...ftActionLoading.value, [id]: null }
+  }
+}
+
+async function ftAddMeasure() {
+  if (!ftSelectedId.value || !ftMeasureForm.value.name.trim()) return
+  ftMeasureSubmitting.value = true
+  try {
+    await api.post(`/api/data-warehouse/fact-tables/${ftSelectedId.value}/add_measure/`, {
+      name:             ftMeasureForm.value.name.trim(),
+      expression:       ftMeasureForm.value.expression.trim(),
+      aggregation_type: ftMeasureForm.value.aggregation_type,
+      description:      ftMeasureForm.value.description.trim() || undefined,
+    })
+    ftMeasureForm.value = { name: '', expression: '', aggregation_type: 'SUM', description: '' }
+    ftShowAddMeasure.value = false
+    await ftLoadMeasures(ftSelectedId.value)
+  } catch { /* ignore */ } finally {
+    ftMeasureSubmitting.value = false
+  }
+}
+
+// ── API: Aggregations tab ─────────────────────────────────
+async function fetchAggregations() {
+  if (aggLoaded.value) return
+  aggLoading.value = true
+  try {
+    const res = await api.get('/api/data-warehouse/aggregations/', {
+      params: { per_page: 200 },
+    })
+    const rows: any[] = Array.isArray(res.data?.results) ? res.data.results
+                      : Array.isArray(res.data)          ? res.data
+                      : []
+    aggRows.value = rows.map((r: any) => ({
+      id:                  r.id,
+      name:                r.name || '',
+      base_table:          r.base_table,
+      base_table_name:     r.base_table_name || r.base_table || '—',
+      granularity:         r.granularity || '',
+      granularity_display: r.granularity_display || r.granularity || '—',
+      row_count:           r.row_count ?? 0,
+      size_bytes:          r.size_bytes ?? 0,
+      compression_ratio:   r.compression_ratio ?? 1,
+      refresh_frequency:   r.refresh_frequency || 'manual',
+      last_refresh:        r.last_refresh || undefined,
+    }))
+    aggLoaded.value = true
+  } catch {
+    aggRows.value = []
+  } finally {
+    aggLoading.value = false
+  }
+}
+
+// ── API: Monitoring tab ───────────────────────────────────
+async function fetchMonitoring() {
+  if (monLoaded.value) return
+  monLogsLoading.value = true
+  monMetricsLoading.value = true
+  try {
+    const [logsRes, statsRes, metricsRes, latestRes] = await Promise.all([
+      api.get('/api/data-warehouse/logs/', { params: { per_page: 100, ordering: '-created_at' } }),
+      api.get('/api/data-warehouse/logs/stats/'),
+      api.get('/api/data-warehouse/metrics/', { params: { per_page: 20 } }),
+      api.get('/api/data-warehouse/metrics/latest/'),
+    ])
+
+    const logRows: any[] = Array.isArray(logsRes.data?.results) ? logsRes.data.results
+                         : Array.isArray(logsRes.data)          ? logsRes.data
+                         : []
+    monLogs.value = logRows.map((l: any) => ({
+      id:               l.id,
+      level:            l.level || 'INFO',
+      message:          l.message || '',
+      table_name:       l.table_name || undefined,
+      execution_time_ms:l.execution_time_ms ?? undefined,
+      rows_affected:    l.rows_affected ?? undefined,
+      created_at:       l.created_at || '',
+    }))
+
+    monLogStats.value = statsRes.data ?? {}
+
+    const metricRows: any[] = Array.isArray(metricsRes.data?.results) ? metricsRes.data.results
+                            : Array.isArray(metricsRes.data)          ? metricsRes.data
+                            : []
+    monMetrics.value = metricRows
+
+    monLatestMetric.value = latestRes.data ?? null
+    monLoaded.value = true
+  } catch {
+    monLogs.value = []
+  } finally {
+    monLogsLoading.value = false
+    monMetricsLoading.value = false
+  }
+}
+
+async function refreshMonitoring() {
+  monLoaded.value = false
+  await fetchMonitoring()
+}
+
+async function refreshFtList() {
+  ftLoaded.value = false
+  await fetchFactTablesList()
+}
+
+async function refreshAggList() {
+  aggLoaded.value = false
+  await fetchAggregations()
+}
+
+// ── Main tab watcher ──────────────────────────────────────
+async function switchMainTab(tab: typeof mainTab.value) {
+  mainTab.value = tab
+  if (tab === 'fact-tables')   await fetchFactTablesList()
+  if (tab === 'aggregations')  await fetchAggregations()
+  if (tab === 'monitoring')    await fetchMonitoring()
+}
+
 // ── Watchers ──────────────────────────────────────────────
 watch(tableTypeTab, async (tab) => {
   selectedTable.value  = null
@@ -360,11 +748,126 @@ async function refresh() {
   refreshing.value = true
   loading.value    = true
   selectedTable.value = null
-  // Reset fact tables so they reload fresh on next switch
   factSchemas.value = []
   await fetchWarehouse()
   lastUpdated.value = new Date()
   refreshing.value  = false
+}
+
+// ── CRUD: Schema ──────────────────────────────────────────
+const schemaDrawerOpen = ref(false)
+const editSchema       = ref<any | null>(null)
+const schemaSubmitting = ref(false)
+const schemaForm       = ref({ name: '', description: '', default_compression: false, is_active: true, tags: '' })
+
+function openSchemaDrawer(schema?: any) {
+  editSchema.value = schema ?? null
+  schemaForm.value = {
+    name:                 schema?.name ?? '',
+    description:          schema?.description ?? '',
+    default_compression:  schema?.default_compression ?? false,
+    is_active:            schema?.is_active ?? true,
+    tags:                 Array.isArray(schema?.tags) ? schema.tags.join(', ') : '',
+  }
+  schemaDrawerOpen.value = true
+}
+
+async function submitSchema() {
+  if (!schemaForm.value.name.trim()) return
+  schemaSubmitting.value = true
+  const payload = {
+    name:                schemaForm.value.name,
+    description:         schemaForm.value.description,
+    default_compression: schemaForm.value.default_compression,
+    is_active:           schemaForm.value.is_active,
+    tags:                schemaForm.value.tags.split(',').map((t: string) => t.trim()).filter(Boolean),
+  }
+  try {
+    if (editSchema.value) {
+      await api.patch(`/api/data-warehouse/schemas/${editSchema.value.id}/`, payload)
+    } else {
+      await api.post('/api/data-warehouse/schemas/', payload)
+    }
+    schemaDrawerOpen.value = false
+    editSchema.value = null
+    await fetchWarehouse()
+  } catch { /* ignore */ } finally {
+    schemaSubmitting.value = false
+  }
+}
+
+async function deleteSchema(schemaId: string) {
+  try { await api.delete(`/api/data-warehouse/schemas/${schemaId}/`) } catch { /* ignore */ }
+  await fetchWarehouse()
+}
+
+// ── CRUD: Table ───────────────────────────────────────────
+const tableDrawerOpen  = ref(false)
+const editTableObj     = ref<any | null>(null)
+const tableSubmitting  = ref(false)
+const tableDeleteConfirm = ref<string | null>(null)
+const tableForm        = ref({
+  name: '', description: '', table_type: 'dimension',
+  status: 'active', scd_type: 1, granularity: '',
+  refresh_frequency: 'daily', is_partitioned: false,
+  is_compressed: false, tags: '',
+  business_owner: '', schema_id: '',
+})
+
+function openTableDrawer(table?: any, schemaId?: string) {
+  editTableObj.value = table ?? null
+  tableForm.value = {
+    name:              table?.name ?? '',
+    description:       table?.description ?? '',
+    table_type:        table?.table_type ?? (tableTypeTab.value === 'facts' ? 'fact' : 'dimension'),
+    status:            table?.status ?? 'active',
+    scd_type:          table?.scd_type ?? 1,
+    granularity:       table?.granularity ?? '',
+    refresh_frequency: table?.refresh_frequency ?? 'daily',
+    is_partitioned:    table?.is_partitioned ?? false,
+    is_compressed:     table?.is_compressed ?? false,
+    tags:              Array.isArray(table?.tags) ? table.tags.join(', ') : '',
+    business_owner:    table?.business_owner ?? '',
+    schema_id:         table?.schema ?? schemaId ?? '',
+  }
+  tableDrawerOpen.value = true
+}
+
+async function submitTable() {
+  if (!tableForm.value.name.trim()) return
+  tableSubmitting.value = true
+  const payload: Record<string, any> = {
+    name:              tableForm.value.name,
+    description:       tableForm.value.description,
+    table_type:        tableForm.value.table_type,
+    status:            tableForm.value.status,
+    granularity:       tableForm.value.granularity || undefined,
+    refresh_frequency: tableForm.value.refresh_frequency,
+    is_partitioned:    tableForm.value.is_partitioned,
+    is_compressed:     tableForm.value.is_compressed,
+    tags:              tableForm.value.tags.split(',').map((t: string) => t.trim()).filter(Boolean),
+    business_owner:    tableForm.value.business_owner || undefined,
+  }
+  if (tableForm.value.schema_id) payload.schema = tableForm.value.schema_id
+  if (tableForm.value.table_type === 'dimension') payload.scd_type = tableForm.value.scd_type
+  try {
+    if (editTableObj.value) {
+      await api.patch(`/api/data-warehouse/tables/${editTableObj.value.id}/`, payload)
+    } else {
+      await api.post('/api/data-warehouse/tables/', payload)
+    }
+    tableDrawerOpen.value = false
+    editTableObj.value = null
+    await refresh()
+  } catch { /* ignore */ } finally {
+    tableSubmitting.value = false
+  }
+}
+
+async function deleteTable(tableId: string) {
+  try { await api.delete(`/api/data-warehouse/tables/${tableId}/`) } catch { /* ignore */ }
+  tableDeleteConfirm.value = null
+  await refresh()
 }
 
 onMounted(fetchWarehouse)
@@ -373,21 +876,70 @@ onMounted(fetchWarehouse)
 <template>
   <div class="wh">
 
+    <!-- ── Main tab navigation ───────────────────────────── -->
+    <nav class="main-tabs" aria-label="Navigation entrepôt">
+      <button
+        class="main-tab"
+        :class="{ 'main-tab--active': mainTab === 'explorer' }"
+        @click="switchMainTab('explorer')"
+      >
+        <Database :size="14" />
+        Explorer
+      </button>
+      <button
+        class="main-tab"
+        :class="{ 'main-tab--active': mainTab === 'fact-tables' }"
+        @click="switchMainTab('fact-tables')"
+      >
+        <BarChart2 :size="14" />
+        Tables de faits
+      </button>
+      <button
+        class="main-tab"
+        :class="{ 'main-tab--active': mainTab === 'aggregations' }"
+        @click="switchMainTab('aggregations')"
+      >
+        <Layers :size="14" />
+        Agrégations
+      </button>
+      <button
+        class="main-tab"
+        :class="{ 'main-tab--active': mainTab === 'monitoring' }"
+        @click="switchMainTab('monitoring')"
+      >
+        <Activity :size="14" />
+        Monitoring
+      </button>
+    </nav>
+
+    <!-- ══ EXPLORER TAB ══════════════════════════════════════ -->
+    <template v-if="mainTab === 'explorer'">
+
     <!-- ── Page header ────────────────────────────────────── -->
     <header class="wh-header">
       <div>
         <h2 class="wh-title">Data Warehouse</h2>
         <p class="wh-meta">Schémas · tables · colonnes · Mis à jour {{ timeAgo(lastUpdated.toISOString()) }}</p>
       </div>
-      <button
-        class="refresh-btn"
-        :class="{ 'refresh-btn--spinning': refreshing }"
-        :disabled="refreshing"
-        @click="refresh"
-      >
-        <RefreshCcw :size="14" />
-        <span>Actualiser</span>
-      </button>
+      <div class="wh-hd-actions">
+        <button
+          class="refresh-btn"
+          :class="{ 'refresh-btn--spinning': refreshing }"
+          :disabled="refreshing"
+          @click="refresh"
+        >
+          <RefreshCcw :size="14" />
+          <span>Actualiser</span>
+        </button>
+        <button class="wh-btn-secondary" @click="openTableDrawer()">
+          <Plus :size="14" />
+          <span>Nouvelle table</span>
+        </button>
+        <button class="wh-btn-primary" @click="openSchemaDrawer()">
+          <Plus :size="14" />
+          <span>Nouveau schéma</span>
+        </button>
+      </div>
     </header>
 
     <!-- ── Stats rail ──────────────────────────────────────── -->
@@ -478,39 +1030,69 @@ onMounted(fetchWarehouse)
               class="tree-group"
             >
               <!-- Schema header -->
-              <button
-                class="tree-schema"
-                :class="{ 'tree-schema--open': activeExpandedSchemas.has(schema.name) }"
-                @click="toggleSchema(schema.name)"
-                :aria-expanded="activeExpandedSchemas.has(schema.name)"
-              >
-                <component
-                  :is="activeExpandedSchemas.has(schema.name) ? ChevronDown : ChevronRight"
-                  :size="13"
-                  class="tree-chevron"
-                />
-                <Database :size="14" class="tree-db-icon" />
-                <span class="tree-schema-name">{{ schema.name }}</span>
-                <span class="tree-count">{{ schema.tables.length }}</span>
-              </button>
+              <div class="tree-schema-row">
+                <button
+                  class="tree-schema"
+                  :class="{ 'tree-schema--open': activeExpandedSchemas.has(schema.name) }"
+                  @click="toggleSchema(schema.name)"
+                  :aria-expanded="activeExpandedSchemas.has(schema.name)"
+                >
+                  <component
+                    :is="activeExpandedSchemas.has(schema.name) ? ChevronDown : ChevronRight"
+                    :size="13"
+                    class="tree-chevron"
+                  />
+                  <Database :size="14" class="tree-db-icon" />
+                  <span class="tree-schema-name">{{ schema.name }}</span>
+                  <span class="tree-count">{{ schema.tables.length }}</span>
+                </button>
+                <div class="tree-schema-actions">
+                  <button class="tree-act-btn" title="Modifier le schéma" @click.stop="openSchemaDrawer(schema)">
+                    <Pencil :size="11" />
+                  </button>
+                  <button class="tree-act-btn tree-act-btn--del" title="Supprimer le schéma" @click.stop="schema.id && deleteSchema(schema.id)">
+                    <Trash2 :size="11" />
+                  </button>
+                </div>
+              </div>
 
               <!-- Tables -->
               <Transition name="tree">
                 <div v-if="activeExpandedSchemas.has(schema.name)" class="tree-tables">
-                  <button
+                  <div
                     v-for="table in schema.tables"
                     :key="table.name"
-                    class="tree-table"
+                    class="tree-table-row"
                     :class="{
-                      'tree-table--active':
+                      'tree-table-row--active':
                         selectedSchema === schema.name && selectedTable?.name === table.name,
                     }"
-                    @click="selectTable(schema, table, tableTypeTab === 'facts')"
                   >
-                    <Table2 :size="13" class="tree-table-icon" />
-                    <span class="tree-table-name">{{ table.name }}</span>
-                    <span class="tree-rows">{{ fmtRows(table.row_count) }}</span>
-                  </button>
+                    <button
+                      class="tree-table"
+                      :class="{
+                        'tree-table--active':
+                          selectedSchema === schema.name && selectedTable?.name === table.name,
+                      }"
+                      @click="selectTable(schema, table, tableTypeTab === 'facts')"
+                    >
+                      <Table2 :size="13" class="tree-table-icon" />
+                      <span class="tree-table-name">{{ table.name }}</span>
+                      <span class="tree-rows">{{ fmtRows(table.row_count) }}</span>
+                    </button>
+                    <div class="tree-table-acts">
+                      <button class="tree-act-btn" title="Modifier" @click.stop="openTableDrawer(table, schema.id)">
+                        <Pencil :size="10" />
+                      </button>
+                      <template v-if="table.id && tableDeleteConfirm === String(table.id)">
+                        <button class="tree-act-btn tree-act-btn--yes" @click.stop="deleteTable(String(table.id))">✓</button>
+                        <button class="tree-act-btn" @click.stop="tableDeleteConfirm = null">✗</button>
+                      </template>
+                      <button v-else class="tree-act-btn tree-act-btn--del" title="Supprimer" @click.stop="tableDeleteConfirm = table.id ? String(table.id) : null">
+                        <Trash2 :size="10" />
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </Transition>
             </div>
@@ -792,6 +1374,495 @@ onMounted(fetchWarehouse)
 
     </div>
 
+    </template><!-- end explorer tab -->
+
+    <!-- ══ FACT TABLES TAB ═══════════════════════════════════ -->
+    <template v-if="mainTab === 'fact-tables'">
+      <div class="tab-panel">
+
+        <!-- Toolbar -->
+        <div class="tab-toolbar">
+          <div class="tab-toolbar-left">
+            <div class="search-wrap">
+              <Search :size="14" class="search-icon" />
+              <input
+                v-model="ftSearch"
+                type="text"
+                class="search-input"
+                placeholder="Rechercher une fact table…"
+              />
+            </div>
+            <div class="select-wrap">
+              <Filter :size="13" class="select-icon" />
+              <select v-model="ftSchemaFilter" class="filter-select">
+                <option value="">Tous les schémas</option>
+                <option v-for="s in ftSchemaOptions" :key="s" :value="s">{{ s }}</option>
+              </select>
+            </div>
+          </div>
+          <button class="refresh-btn" :disabled="ftLoading" @click="refreshFtList">
+            <Loader2 v-if="ftLoading" :size="14" class="spin-icon" />
+            <RefreshCcw v-else :size="14" />
+            <span>Actualiser</span>
+          </button>
+        </div>
+
+        <!-- Loading skeleton -->
+        <template v-if="ftLoading">
+          <div class="tbl-skel">
+            <div v-for="i in 5" :key="i" class="tbl-skel-row"></div>
+          </div>
+        </template>
+
+        <!-- Fact tables table -->
+        <template v-else>
+          <div class="data-table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th class="dt-th">Nom</th>
+                  <th class="dt-th">Schéma</th>
+                  <th class="dt-th dt-th--num">Lignes</th>
+                  <th class="dt-th dt-th--num">Mesures</th>
+                  <th class="dt-th">Granularité</th>
+                  <th class="dt-th">Statut</th>
+                  <th class="dt-th">Dernière MAJ</th>
+                  <th class="dt-th dt-th--actions">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template v-if="ftFiltered.length === 0">
+                  <tr>
+                    <td colspan="8" class="dt-empty">
+                      <Table2 :size="32" />
+                      <span>Aucune fact table trouvée</span>
+                    </td>
+                  </tr>
+                </template>
+                <template v-for="row in ftFiltered" :key="row.id">
+                  <tr
+                    class="dt-row"
+                    :class="{ 'dt-row--selected': ftSelectedId === row.id }"
+                    @click="selectFactTable(row.id)"
+                  >
+                    <td class="dt-td dt-td--name">
+                      <span class="dt-name">{{ row.name }}</span>
+                      <span v-if="row.is_partitioned" class="dt-tag">partitionné</span>
+                    </td>
+                    <td class="dt-td">
+                      <span class="schema-chip">{{ row.schema_name }}</span>
+                    </td>
+                    <td class="dt-td dt-td--num">{{ fmtRows(row.row_count) }}</td>
+                    <td class="dt-td dt-td--num">{{ row.measures_count }}</td>
+                    <td class="dt-td">
+                      <span class="gran-badge">{{ row.granularity_display }}</span>
+                    </td>
+                    <td class="dt-td">
+                      <span class="status-badge" :class="statusClass(row.status)">{{ row.status }}</span>
+                    </td>
+                    <td class="dt-td dt-td--muted">{{ timeAgo(row.last_refresh) }}</td>
+                    <td class="dt-td dt-td--actions" @click.stop>
+                      <button
+                        class="act-btn act-btn--analyze"
+                        :disabled="!!ftActionLoading[row.id]"
+                        :title="'Analyser ' + row.name"
+                        @click="ftDoAction(row.id, 'analyze')"
+                      >
+                        <Loader2 v-if="ftActionLoading[row.id] === 'analyze'" :size="12" class="spin-icon" />
+                        <BarChart2 v-else :size="12" />
+                        <span>Analyser</span>
+                      </button>
+                      <button
+                        class="act-btn act-btn--optimize"
+                        :disabled="!!ftActionLoading[row.id]"
+                        :title="'Optimiser ' + row.name"
+                        @click="ftDoAction(row.id, 'optimize')"
+                      >
+                        <Loader2 v-if="ftActionLoading[row.id] === 'optimize'" :size="12" class="spin-icon" />
+                        <AlertTriangle v-else :size="12" />
+                        <span>Optimiser</span>
+                      </button>
+                      <button
+                        class="act-btn act-btn--refresh"
+                        :disabled="!!ftActionLoading[row.id]"
+                        :title="'Rafraîchir ' + row.name"
+                        @click="ftDoAction(row.id, 'refresh')"
+                      >
+                        <Loader2 v-if="ftActionLoading[row.id] === 'refresh'" :size="12" class="spin-icon" />
+                        <RefreshCcw v-else :size="12" />
+                        <span>Rafraîchir</span>
+                      </button>
+                      <button
+                        class="act-btn act-btn--detail"
+                        :class="{ 'act-btn--detail-open': ftSelectedId === row.id }"
+                        :title="ftSelectedId === row.id ? 'Fermer' : 'Détail'"
+                        @click="selectFactTable(row.id)"
+                      >
+                        <component :is="ftSelectedId === row.id ? ChevronDown : ChevronRight" :size="12" />
+                      </button>
+                    </td>
+                  </tr>
+
+                  <!-- Action message row -->
+                  <tr v-if="ftActionMsg[row.id]" class="dt-msg-row">
+                    <td colspan="8">
+                      <span
+                        class="action-msg"
+                        :class="ftActionMsg[row.id].startsWith('Erreur') ? 'action-msg--err' : 'action-msg--ok'"
+                      >
+                        <CheckCircle2 v-if="!ftActionMsg[row.id].startsWith('Erreur')" :size="12" />
+                        <AlertTriangle v-else :size="12" />
+                        {{ ftActionMsg[row.id] }}
+                      </span>
+                    </td>
+                  </tr>
+
+                  <!-- Detail expansion row -->
+                  <tr v-if="ftSelectedId === row.id" class="dt-detail-row">
+                    <td colspan="8" class="dt-detail-cell">
+                      <div class="ft-detail-panel">
+                        <div class="ft-detail-hd">
+                          <h4 class="ft-detail-title">
+                            <Hash :size="14" />
+                            Mesures de {{ row.name }}
+                          </h4>
+                          <button
+                            class="act-btn act-btn--add"
+                            @click="ftShowAddMeasure = !ftShowAddMeasure"
+                          >
+                            <Plus :size="12" />
+                            Ajouter une mesure
+                          </button>
+                        </div>
+
+                        <!-- Add measure form -->
+                        <Transition name="form-slide">
+                          <form
+                            v-if="ftShowAddMeasure"
+                            class="add-measure-form"
+                            @submit.prevent="ftAddMeasure"
+                          >
+                            <div class="wh-form-row-2">
+                              <div class="wh-form-field">
+                                <label class="wh-form-label">Nom <span class="wh-req">*</span></label>
+                                <input
+                                  v-model="ftMeasureForm.name"
+                                  class="wh-form-input"
+                                  required
+                                  placeholder="revenue_total"
+                                />
+                              </div>
+                              <div class="wh-form-field">
+                                <label class="wh-form-label">Expression <span class="wh-req">*</span></label>
+                                <input
+                                  v-model="ftMeasureForm.expression"
+                                  class="wh-form-input"
+                                  placeholder="SUM(amount)"
+                                />
+                              </div>
+                            </div>
+                            <div class="wh-form-row-2">
+                              <div class="wh-form-field">
+                                <label class="wh-form-label">Type d'agrégation</label>
+                                <div class="wh-select-wrap">
+                                  <select v-model="ftMeasureForm.aggregation_type" class="wh-form-select">
+                                    <option value="SUM">SUM</option>
+                                    <option value="AVG">AVG</option>
+                                    <option value="COUNT">COUNT</option>
+                                    <option value="MIN">MIN</option>
+                                    <option value="MAX">MAX</option>
+                                  </select>
+                                  <ChevronDown :size="13" class="wh-select-arrow" />
+                                </div>
+                              </div>
+                              <div class="wh-form-field">
+                                <label class="wh-form-label">Description</label>
+                                <input
+                                  v-model="ftMeasureForm.description"
+                                  class="wh-form-input"
+                                  placeholder="Description optionnelle"
+                                />
+                              </div>
+                            </div>
+                            <div class="add-measure-actions">
+                              <button
+                                type="button"
+                                class="wh-btn-ghost"
+                                @click="ftShowAddMeasure = false"
+                              >Annuler</button>
+                              <button
+                                type="submit"
+                                class="wh-btn-primary"
+                                :disabled="ftMeasureSubmitting"
+                              >
+                                <span v-if="!ftMeasureSubmitting">Ajouter</span>
+                                <span v-else class="wh-spinner"></span>
+                              </button>
+                            </div>
+                          </form>
+                        </Transition>
+
+                        <!-- Measures list -->
+                        <div v-if="ftMeasuresLoading" class="sub-loading">
+                          <Loader2 :size="18" class="spin-icon" />
+                          <span>Chargement des mesures…</span>
+                        </div>
+                        <div v-else-if="ftMeasures.length === 0 && !ftShowAddMeasure" class="sub-empty">
+                          <Hash :size="28" class="sub-empty-icon" />
+                          <p>Aucune mesure définie</p>
+                        </div>
+                        <div v-else class="ft-measures-grid">
+                          <div
+                            v-for="m in ftMeasures"
+                            :key="m.name"
+                            class="ft-measure-card"
+                          >
+                            <div class="ft-measure-top">
+                              <span class="measure-name">{{ m.name }}</span>
+                              <span class="agg-badge" :class="aggClass(m.aggregation_type)">
+                                {{ m.aggregation_type }}
+                              </span>
+                            </div>
+                            <div class="ft-measure-expr">{{ m.expression || '—' }}</div>
+                            <div v-if="m.description" class="measure-desc">{{ m.description }}</div>
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </template>
+      </div>
+    </template><!-- end fact-tables tab -->
+
+    <!-- ══ AGGREGATIONS TAB ═══════════════════════════════════ -->
+    <template v-if="mainTab === 'aggregations'">
+      <div class="tab-panel">
+
+        <!-- Toolbar -->
+        <div class="tab-toolbar">
+          <div class="tab-toolbar-left">
+            <div class="select-wrap">
+              <Filter :size="13" class="select-icon" />
+              <select v-model="aggGranularity" class="filter-select">
+                <option value="">Toutes les granularités</option>
+                <option value="daily">Quotidienne</option>
+                <option value="weekly">Hebdomadaire</option>
+                <option value="monthly">Mensuelle</option>
+                <option value="quarterly">Trimestrielle</option>
+              </select>
+            </div>
+          </div>
+          <button class="refresh-btn" :disabled="aggLoading" @click="refreshAggList">
+            <Loader2 v-if="aggLoading" :size="14" class="spin-icon" />
+            <RefreshCcw v-else :size="14" />
+            <span>Actualiser</span>
+          </button>
+        </div>
+
+        <!-- Loading skeleton -->
+        <template v-if="aggLoading">
+          <div class="tbl-skel">
+            <div v-for="i in 5" :key="i" class="tbl-skel-row"></div>
+          </div>
+        </template>
+
+        <template v-else>
+          <div class="data-table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th class="dt-th">Nom</th>
+                  <th class="dt-th">Table de base</th>
+                  <th class="dt-th">Granularité</th>
+                  <th class="dt-th dt-th--num">Lignes</th>
+                  <th class="dt-th dt-th--num">Taille</th>
+                  <th class="dt-th dt-th--num">Compression</th>
+                  <th class="dt-th">Fréquence</th>
+                  <th class="dt-th">Dernier rafraîch.</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template v-if="aggFiltered.length === 0">
+                  <tr>
+                    <td colspan="8" class="dt-empty">
+                      <Layers :size="32" />
+                      <span>Aucune agrégation trouvée</span>
+                    </td>
+                  </tr>
+                </template>
+                <tr
+                  v-for="row in aggFiltered"
+                  :key="row.id"
+                  class="dt-row"
+                >
+                  <td class="dt-td dt-td--name">
+                    <span class="dt-name">{{ row.name }}</span>
+                  </td>
+                  <td class="dt-td">
+                    <span class="schema-chip">{{ row.base_table_name }}</span>
+                  </td>
+                  <td class="dt-td">
+                    <span class="gran-badge">{{ row.granularity_display }}</span>
+                  </td>
+                  <td class="dt-td dt-td--num">{{ fmtRows(row.row_count) }}</td>
+                  <td class="dt-td dt-td--num">{{ fmtBytes(row.size_bytes) }}</td>
+                  <td class="dt-td dt-td--num">{{ row.compression_ratio ? row.compression_ratio.toFixed(2) + 'x' : '—' }}</td>
+                  <td class="dt-td dt-td--muted">{{ row.refresh_frequency || '—' }}</td>
+                  <td class="dt-td dt-td--muted">{{ timeAgo(row.last_refresh) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </template>
+      </div>
+    </template><!-- end aggregations tab -->
+
+    <!-- ══ MONITORING TAB ═════════════════════════════════════ -->
+    <template v-if="mainTab === 'monitoring'">
+      <div class="tab-panel">
+
+        <!-- Toolbar -->
+        <div class="tab-toolbar">
+          <div class="tab-toolbar-left">
+            <div class="select-wrap">
+              <Filter :size="13" class="select-icon" />
+              <select v-model="monLevelFilter" class="filter-select">
+                <option value="">Tous les niveaux</option>
+                <option value="DEBUG">DEBUG</option>
+                <option value="INFO">INFO</option>
+                <option value="WARNING">WARNING</option>
+                <option value="ERROR">ERROR</option>
+                <option value="CRITICAL">CRITICAL</option>
+              </select>
+            </div>
+          </div>
+          <button class="refresh-btn" :disabled="monLogsLoading" @click="refreshMonitoring">
+            <Loader2 v-if="monLogsLoading" :size="14" class="spin-icon" />
+            <RefreshCcw v-else :size="14" />
+            <span>Actualiser</span>
+          </button>
+        </div>
+
+        <!-- Stats row -->
+        <div v-if="Object.keys(monLogStats).length" class="mon-stats-row">
+          <div
+            v-for="(val, key) in monLogStats"
+            :key="key"
+            class="mon-stat-card"
+          >
+            <span class="mon-stat-key">{{ key }}</span>
+            <span class="mon-stat-val">{{ val }}</span>
+          </div>
+        </div>
+
+        <!-- Latest metrics cards -->
+        <template v-if="monLatestMetric">
+          <div class="mon-section-title">
+            <Activity :size="14" />
+            Dernières métriques
+          </div>
+          <div class="mon-metrics-grid">
+            <div
+              v-for="(val, key) in monLatestMetric"
+              :key="key"
+              class="mon-metric-card"
+            >
+              <span class="mon-metric-key">{{ key }}</span>
+              <span class="mon-metric-val">{{ val }}</span>
+            </div>
+          </div>
+        </template>
+
+        <!-- Logs table -->
+        <div class="mon-section-title">
+          <Clock :size="14" />
+          Logs DWH
+        </div>
+
+        <template v-if="monLogsLoading">
+          <div class="tbl-skel">
+            <div v-for="i in 6" :key="i" class="tbl-skel-row"></div>
+          </div>
+        </template>
+
+        <template v-else>
+          <div class="data-table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th class="dt-th">Horodatage</th>
+                  <th class="dt-th">Niveau</th>
+                  <th class="dt-th">Table</th>
+                  <th class="dt-th">Message</th>
+                  <th class="dt-th dt-th--num">Durée (ms)</th>
+                  <th class="dt-th dt-th--num">Lignes</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template v-if="monFilteredLogs.length === 0">
+                  <tr>
+                    <td colspan="6" class="dt-empty">
+                      <Activity :size="32" />
+                      <span>Aucun log disponible</span>
+                    </td>
+                  </tr>
+                </template>
+                <tr
+                  v-for="log in monFilteredLogs"
+                  :key="log.id"
+                  class="dt-row"
+                >
+                  <td class="dt-td dt-td--muted dt-td--nowrap">{{ fmtDateTime(log.created_at) }}</td>
+                  <td class="dt-td">
+                    <span class="level-badge" :class="levelClass(log.level)">{{ log.level }}</span>
+                  </td>
+                  <td class="dt-td dt-td--muted">{{ log.table_name || '—' }}</td>
+                  <td class="dt-td dt-td--msg">{{ log.message }}</td>
+                  <td class="dt-td dt-td--num">{{ fmtMs(log.execution_time_ms) }}</td>
+                  <td class="dt-td dt-td--num">{{ log.rows_affected ?? '—' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </template>
+
+        <!-- Historical metrics table -->
+        <template v-if="monMetrics.length">
+          <div class="mon-section-title">
+            <BarChart2 :size="14" />
+            Métriques récentes
+          </div>
+          <div class="data-table-wrap" style="max-height: 300px;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th
+                    v-for="key in Object.keys(monMetrics[0] || {})"
+                    :key="key"
+                    class="dt-th"
+                  >{{ key }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(metric, idx) in monMetrics" :key="idx" class="dt-row">
+                  <td
+                    v-for="key in Object.keys(metric)"
+                    :key="key"
+                    class="dt-td dt-td--muted"
+                  >{{ metric[key] ?? '—' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </template>
+
+      </div>
+    </template><!-- end monitoring tab -->
+
     <!-- ── Optimize confirmation dialog ───────────────────── -->
     <Transition name="dialog">
       <div v-if="showOptimizeDialog" class="dialog-overlay" @click.self="showOptimizeDialog = false">
@@ -812,6 +1883,166 @@ onMounted(fetchWarehouse)
             </button>
           </div>
         </div>
+      </div>
+    </Transition>
+
+    <!-- ══ DRAWER: New/Edit Schema ════════════════════════ -->
+    <Transition name="drawer-anim">
+      <div v-if="schemaDrawerOpen" class="wh-drawer-overlay" @click.self="schemaDrawerOpen = false">
+        <aside class="wh-drawer" role="dialog" aria-modal="true">
+          <div class="wh-drawer-hd">
+            <h3 class="wh-drawer-title">{{ editSchema ? 'Modifier le schéma' : 'Nouveau schéma' }}</h3>
+            <button class="wh-drawer-close" @click="schemaDrawerOpen = false; editSchema = null"><X :size="18" /></button>
+          </div>
+          <form class="wh-drawer-form" @submit.prevent="submitSchema">
+
+            <div class="wh-form-field">
+              <label class="wh-form-label">Nom <span class="wh-req">*</span></label>
+              <input v-model="schemaForm.name" class="wh-form-input" required placeholder="Ex : analytics, reporting…" />
+            </div>
+            <div class="wh-form-field">
+              <label class="wh-form-label">Description</label>
+              <textarea v-model="schemaForm.description" class="wh-form-textarea" rows="2" placeholder="Description du schéma…"></textarea>
+            </div>
+            <div class="wh-form-field">
+              <label class="wh-form-label">Tags <span class="wh-opt">séparés par virgule</span></label>
+              <input v-model="schemaForm.tags" class="wh-form-input" placeholder="production, BI, analytique" />
+            </div>
+            <div class="wh-form-field">
+              <label class="wh-form-label wh-toggle-label">
+                <input type="checkbox" v-model="schemaForm.default_compression" class="wh-form-checkbox" />
+                Compression par défaut
+              </label>
+            </div>
+            <div class="wh-form-field">
+              <label class="wh-form-label wh-toggle-label">
+                <input type="checkbox" v-model="schemaForm.is_active" class="wh-form-checkbox" />
+                Schéma actif
+              </label>
+            </div>
+
+            <div class="wh-drawer-footer">
+              <button type="button" class="wh-btn-ghost" @click="schemaDrawerOpen = false; editSchema = null">Annuler</button>
+              <button type="submit" class="wh-btn-primary" :disabled="schemaSubmitting">
+                <span v-if="!schemaSubmitting">{{ editSchema ? 'Enregistrer' : 'Créer' }}</span>
+                <span v-else class="wh-spinner"></span>
+              </button>
+            </div>
+          </form>
+        </aside>
+      </div>
+    </Transition>
+
+    <!-- ══ DRAWER: New/Edit Table ══════════════════════════ -->
+    <Transition name="drawer-anim">
+      <div v-if="tableDrawerOpen" class="wh-drawer-overlay" @click.self="tableDrawerOpen = false">
+        <aside class="wh-drawer" role="dialog" aria-modal="true">
+          <div class="wh-drawer-hd">
+            <h3 class="wh-drawer-title">{{ editTableObj ? 'Modifier la table' : 'Nouvelle table' }}</h3>
+            <button class="wh-drawer-close" @click="tableDrawerOpen = false; editTableObj = null"><X :size="18" /></button>
+          </div>
+          <form class="wh-drawer-form" @submit.prevent="submitTable">
+
+            <div class="wh-form-field">
+              <label class="wh-form-label">Nom <span class="wh-req">*</span></label>
+              <input v-model="tableForm.name" class="wh-form-input" required placeholder="Ex : dim_client, fact_ventes…" />
+            </div>
+            <div class="wh-form-field">
+              <label class="wh-form-label">Description</label>
+              <textarea v-model="tableForm.description" class="wh-form-textarea" rows="2"></textarea>
+            </div>
+
+            <div class="wh-form-row-2">
+              <div class="wh-form-field">
+                <label class="wh-form-label">Type de table</label>
+                <div class="wh-select-wrap">
+                  <select v-model="tableForm.table_type" class="wh-form-select">
+                    <option value="dimension">Dimension</option>
+                    <option value="fact">Fait</option>
+                    <option value="bridge">Pont</option>
+                    <option value="staging">Staging</option>
+                    <option value="aggregation">Agrégation</option>
+                  </select>
+                  <ChevronDown :size="13" class="wh-select-arrow" />
+                </div>
+              </div>
+              <div class="wh-form-field">
+                <label class="wh-form-label">Statut</label>
+                <div class="wh-select-wrap">
+                  <select v-model="tableForm.status" class="wh-form-select">
+                    <option value="active">Actif</option>
+                    <option value="draft">Brouillon</option>
+                    <option value="deprecated">Obsolète</option>
+                    <option value="archived">Archivé</option>
+                  </select>
+                  <ChevronDown :size="13" class="wh-select-arrow" />
+                </div>
+              </div>
+            </div>
+
+            <div class="wh-form-row-2" v-if="tableForm.table_type === 'dimension'">
+              <div class="wh-form-field">
+                <label class="wh-form-label">Type SCD</label>
+                <div class="wh-select-wrap">
+                  <select v-model.number="tableForm.scd_type" class="wh-form-select">
+                    <option :value="1">SCD Type 1</option>
+                    <option :value="2">SCD Type 2</option>
+                    <option :value="3">SCD Type 3</option>
+                    <option :value="6">SCD Type 6</option>
+                  </select>
+                  <ChevronDown :size="13" class="wh-select-arrow" />
+                </div>
+              </div>
+              <div class="wh-form-field">
+                <label class="wh-form-label">Granularité</label>
+                <input v-model="tableForm.granularity" class="wh-form-input" placeholder="Ex : jour, mois…" />
+              </div>
+            </div>
+
+            <div class="wh-form-row-2">
+              <div class="wh-form-field">
+                <label class="wh-form-label">Fréquence de refresh</label>
+                <div class="wh-select-wrap">
+                  <select v-model="tableForm.refresh_frequency" class="wh-form-select">
+                    <option value="manual">Manuelle</option>
+                    <option value="hourly">Horaire</option>
+                    <option value="daily">Quotidienne</option>
+                    <option value="weekly">Hebdomadaire</option>
+                    <option value="monthly">Mensuelle</option>
+                  </select>
+                  <ChevronDown :size="13" class="wh-select-arrow" />
+                </div>
+              </div>
+              <div class="wh-form-field">
+                <label class="wh-form-label">Propriétaire métier</label>
+                <input v-model="tableForm.business_owner" class="wh-form-input" placeholder="Ex : Direction Finance" />
+              </div>
+            </div>
+
+            <div class="wh-form-field">
+              <label class="wh-form-label">Tags</label>
+              <input v-model="tableForm.tags" class="wh-form-input" placeholder="critique, reporting, finance" />
+            </div>
+            <div class="wh-form-checks">
+              <label class="wh-form-label wh-toggle-label">
+                <input type="checkbox" v-model="tableForm.is_partitioned" class="wh-form-checkbox" />
+                Table partitionnée
+              </label>
+              <label class="wh-form-label wh-toggle-label">
+                <input type="checkbox" v-model="tableForm.is_compressed" class="wh-form-checkbox" />
+                Compression activée
+              </label>
+            </div>
+
+            <div class="wh-drawer-footer">
+              <button type="button" class="wh-btn-ghost" @click="tableDrawerOpen = false; editTableObj = null">Annuler</button>
+              <button type="submit" class="wh-btn-primary" :disabled="tableSubmitting">
+                <span v-if="!tableSubmitting">{{ editTableObj ? 'Enregistrer' : 'Créer' }}</span>
+                <span v-else class="wh-spinner"></span>
+              </button>
+            </div>
+          </form>
+        </aside>
       </div>
     </Transition>
 
@@ -1728,4 +2959,153 @@ onMounted(fetchWarehouse)
   .stat-sep { display: none; }
   .stat-item { flex: 1 1 40%; }
 }
+
+/* ── Warehouse header actions ────────────────────────────── */
+.wh-hd-actions { display: flex; align-items: center; gap: var(--sp-2); }
+.wh-btn-primary {
+  display: flex; align-items: center; gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-4);
+  background: var(--accent); color: var(--text-on-accent);
+  border: none; border-radius: var(--radius-md);
+  cursor: pointer; font-family: var(--font-ui);
+  font-size: var(--text-sm); font-weight: 600; min-height: 36px;
+  transition: background 150ms; white-space: nowrap;
+}
+.wh-btn-primary:hover { background: oklch(80% 0.14 62); }
+.wh-btn-secondary {
+  display: flex; align-items: center; gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-4);
+  background: none; border: 1px solid var(--border-default);
+  border-radius: var(--radius-md); cursor: pointer;
+  font-family: var(--font-ui); font-size: var(--text-sm); font-weight: 500;
+  color: var(--text-secondary); min-height: 36px; white-space: nowrap;
+  transition: all 150ms;
+}
+.wh-btn-secondary:hover { border-color: var(--border-strong); color: var(--text-primary); }
+.wh-btn-ghost {
+  display: flex; align-items: center; gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-4); background: none;
+  border: 1px solid var(--border-default); border-radius: var(--radius-md);
+  cursor: pointer; font-family: var(--font-ui); font-size: var(--text-sm);
+  font-weight: 500; color: var(--text-secondary); min-height: 36px;
+  transition: all 150ms;
+}
+.wh-btn-ghost:hover { border-color: var(--border-strong); color: var(--text-primary); }
+
+/* ── Tree schema/table row with actions ──────────────────── */
+.tree-schema-row {
+  display: flex; align-items: center;
+}
+.tree-schema-row .tree-schema { flex: 1; }
+.tree-schema-actions {
+  display: none; align-items: center; gap: 2px;
+  padding-right: var(--sp-2);
+}
+.tree-schema-row:hover .tree-schema-actions { display: flex; }
+
+.tree-table-row {
+  display: flex; align-items: center;
+}
+.tree-table-row .tree-table { flex: 1; }
+.tree-table-acts {
+  display: none; align-items: center; gap: 2px;
+  padding-right: var(--sp-2);
+}
+.tree-table-row:hover .tree-table-acts { display: flex; }
+.tree-table-row--active { background: var(--accent-surface); }
+
+.tree-act-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 20px; height: 20px;
+  border: 1px solid transparent; border-radius: var(--radius-sm);
+  background: none; color: var(--text-muted);
+  cursor: pointer; transition: all 100ms;
+}
+.tree-act-btn:hover { background: var(--surface-overlay); border-color: var(--border-default); color: var(--text-secondary); }
+.tree-act-btn--del:hover { background: var(--error-surface); border-color: var(--error); color: var(--error); }
+.tree-act-btn--yes { background: var(--error-surface); border-color: var(--error); color: var(--error); }
+
+/* ── Warehouse Drawers ───────────────────────────────────── */
+.wh-drawer-overlay {
+  position: fixed; inset: 0;
+  background: oklch(5% 0.01 258 / 0.72);
+  z-index: var(--z-modal); display: flex; justify-content: flex-end;
+}
+.wh-drawer {
+  width: 480px; max-width: 100vw; height: 100dvh;
+  background: var(--surface-raised);
+  border-left: 1px solid var(--border-default);
+  display: flex; flex-direction: column; overflow-y: auto;
+}
+.wh-drawer-hd {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: var(--sp-6); border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0; position: sticky; top: 0;
+  background: var(--surface-raised); z-index: 1;
+}
+.wh-drawer-title { font-family: var(--font-display); font-size: var(--text-xl); font-weight: 700; color: var(--text-primary); }
+.wh-drawer-close {
+  display: flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border-default); background: none;
+  color: var(--text-secondary); cursor: pointer; transition: all 150ms;
+}
+.wh-drawer-close:hover { border-color: var(--border-strong); color: var(--text-primary); }
+.wh-drawer-form { display: flex; flex-direction: column; gap: var(--sp-5); padding: var(--sp-6); flex: 1; }
+.wh-drawer-footer {
+  display: flex; gap: var(--sp-3); justify-content: flex-end;
+  padding-top: var(--sp-4); margin-top: auto;
+  border-top: 1px solid var(--border-subtle); flex-shrink: 0;
+}
+.wh-form-field { display: flex; flex-direction: column; gap: var(--sp-2); }
+.wh-form-label { font-size: var(--text-sm); font-weight: 600; color: var(--text-secondary); }
+.wh-form-input {
+  height: 40px; padding: 0 var(--sp-4);
+  background: var(--surface-overlay); border: 1px solid var(--border-default);
+  border-radius: var(--radius-md); color: var(--text-primary);
+  font-family: var(--font-ui); font-size: var(--text-sm); outline: none;
+  transition: border-color 150ms;
+}
+.wh-form-input:focus { border-color: var(--accent-dim); }
+.wh-form-input::placeholder { color: var(--text-muted); }
+.wh-form-textarea {
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--surface-overlay); border: 1px solid var(--border-default);
+  border-radius: var(--radius-md); color: var(--text-primary);
+  font-family: var(--font-ui); font-size: var(--text-sm);
+  outline: none; resize: vertical; transition: border-color 150ms;
+}
+.wh-form-textarea:focus { border-color: var(--accent-dim); }
+.wh-form-select {
+  appearance: none; height: 40px; padding: 0 30px 0 var(--sp-3);
+  background: var(--surface-overlay); border: 1px solid var(--border-default);
+  border-radius: var(--radius-md); color: var(--text-primary);
+  font-family: var(--font-ui); font-size: var(--text-sm);
+  outline: none; cursor: pointer; width: 100%;
+}
+.wh-form-select:focus { border-color: var(--accent-dim); }
+.wh-form-select option { background: var(--surface-raised); }
+.wh-select-wrap { position: relative; }
+.wh-select-arrow { position: absolute; right: 9px; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; }
+.wh-form-checkbox { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+.wh-toggle-label { display: flex; align-items: center; gap: var(--sp-2); cursor: pointer; }
+.wh-form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
+.wh-form-checks { display: flex; flex-direction: column; gap: var(--sp-3); }
+.wh-req { color: var(--accent-dim); }
+.wh-opt { font-size: var(--text-xs); font-weight: 400; color: var(--text-muted); margin-left: 4px; }
+@keyframes wh-spin { to { transform: rotate(360deg); } }
+.wh-spinner {
+  display: block; width: 16px; height: 16px;
+  border: 2px solid oklch(14% 0.013 258 / 0.3);
+  border-top-color: var(--text-on-accent);
+  border-radius: 50%; animation: wh-spin 0.7s linear infinite;
+}
+
+/* Drawer animation */
+.drawer-anim-enter-active { transition: opacity 220ms ease; }
+.drawer-anim-leave-active { transition: opacity 180ms ease; }
+.drawer-anim-enter-from, .drawer-anim-leave-to { opacity: 0; }
+.drawer-anim-enter-active .wh-drawer { transition: transform 380ms cubic-bezier(0.16, 1, 0.3, 1); }
+.drawer-anim-leave-active .wh-drawer  { transition: transform 220ms cubic-bezier(0.4, 0, 1, 1); }
+.drawer-anim-enter-from .wh-drawer, .drawer-anim-leave-to .wh-drawer { transform: translateX(100%); }
 </style>

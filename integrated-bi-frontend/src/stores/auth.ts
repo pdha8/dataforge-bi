@@ -5,12 +5,20 @@ import axios from 'axios'
 const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 
 export interface UserProfile {
-  id: number
+  id: string
   username: string
   email: string
   first_name: string
   last_name: string
   role?: string
+  department?: string
+  job_title?: string
+  phone?: string
+  employee_id?: string
+  timezone?: string
+  language?: string
+  two_factor_enabled?: boolean
+  api_access_enabled?: boolean
 }
 
 export const useAuthStore = defineStore('auth', () => {
