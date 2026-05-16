@@ -112,41 +112,13 @@ DATABASES = {
     'apps.data_warehouse.routers.DataWarehouseRouter',
 ]
  """
-# Cache avec Redis
-# config/settings/base.py
-
-""" # Cache avec Redis - VERSION CORRIGÉE
+# Cache en mémoire (développement sans Redis)
 CACHES = {
     'default': {
-        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
-        'LOCATION': env('REDIS_URL', default='redis://localhost:6379/1'),
-        'OPTIONS': {
-            'PARSER_CLASS': 'redis.connection.HiredisParser',
-            'CONNECTION_POOL_CLASS': 'redis.BlockingConnectionPool',
-            'CONNECTION_POOL_CLASS_KWARGS': {
-                'max_connections': 50,
-                'timeout': 20,
-            },
-            # 'CLIENT_CLASS' n'est PAS supporté - À SUPPRIMER
-        },
-        'KEY_PREFIX': 'iotshield',
-        'TIMEOUT': 300,  # 5 minutes
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'sotifibre-cache',
     },
-    
-    'nvd': {
-        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
-        'LOCATION': env('REDIS_URL', default='redis://localhost:6379/2'),
-        'KEY_PREFIX': 'nvd',
-        'TIMEOUT': 86400,  # 24 heures
-    },
-    
-    'scans': {
-        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
-        'LOCATION': env('REDIS_URL', default='redis://localhost:6379/3'),
-        'KEY_PREFIX': 'scans',
-        'TIMEOUT': 3600,  # 1 heure
-    },
-} """
+}
 
 # Custom user model
 AUTH_USER_MODEL = 'users.User'
@@ -204,7 +176,7 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
         "anon": "100/hour",
         "user": "1000/hour",
-        "login": "10/minute",
+        "login": "60/minute",
         "scan": "50/day",
     },
     "EXCEPTION_HANDLER": "apps.core.exceptions.custom_exception_handler",

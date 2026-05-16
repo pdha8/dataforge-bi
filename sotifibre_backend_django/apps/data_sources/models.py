@@ -466,13 +466,17 @@ class DataSourceFile(BaseModel):
     """
     # Utiliser FILE_PROCESS_STATUS importé
     PROCESS_STATUS = FILE_PROCESS_STATUS
-    
-    data_source = models.ForeignKey(DataSource, on_delete=models.CASCADE, related_name='files')
+
+    data_source = models.ForeignKey(
+        DataSource, on_delete=models.SET_NULL, null=True, blank=True, related_name='files'
+    )
     file = models.FileField(
         'Fichier', upload_to='data_sources/%Y/%m/%d/',
-        validators=[FileExtensionValidator(allowed_extensions=['xlsx', 'xls', 'csv', 'json', 'xml', 'parquet', 'avro', 'txt'])]
+        validators=[FileExtensionValidator(allowed_extensions=['csv', 'xlsx', 'xls', 'yaml', 'yml', 'json', 'tsv', 'html', 'htm'])]
     )
+    name = models.CharField('Nom affiché', max_length=255, blank=True)
     original_name = models.CharField('Nom original', max_length=255)
+    file_type = models.CharField('Type de fichier', max_length=20, choices=FILE_TYPES, default='csv', blank=True)
     file_hash = models.CharField('Hash MD5', max_length=32, blank=True)
     file_size = models.BigIntegerField('Taille (octets)', default=0)
     mime_type = models.CharField('Type MIME', max_length=100, blank=True)
@@ -518,7 +522,8 @@ class DataSourceFile(BaseModel):
         ]
     
     def __str__(self):
-        return f"{self.original_name} ({self.data_source.name})"
+        source = self.data_source.name if self.data_source else 'sans source'
+        return f"{self.name or self.original_name} ({source})"
     
     def save(self, *args, **kwargs):
         if self.file and not self.file_hash:

@@ -14,10 +14,20 @@ const { collapsed, toggle } = useSidebar()
 const route = useRoute()
 const auth = useAuthStore()
 
+type PermKey =
+  | 'canManageDataSources'
+  | 'canManageETL'
+  | 'canManageWarehouse'
+  | 'canManageDashboards'
+  | 'canManageKPIs'
+  | 'canManageVisualizations'
+  | 'canAccessAdmin'
+
 interface NavItem {
   icon: unknown
   label: string
   to: string
+  requires?: PermKey
 }
 
 interface NavGroup {
@@ -25,7 +35,7 @@ interface NavGroup {
   items: NavItem[]
 }
 
-const navGroups: NavGroup[] = [
+const allNavGroups: NavGroup[] = [
   {
     heading: null,
     items: [
@@ -45,15 +55,15 @@ const navGroups: NavGroup[] = [
     heading: 'Données',
     items: [
       { icon: Database,    label: 'Sources',              to: '/sources' },
-      { icon: Plug,        label: 'Connexions DB',        to: '/sources/connections' },
-      { icon: FolderOpen,  label: 'Fichiers',             to: '/sources/files' },
+      { icon: Plug,        label: 'Connexions DB',        to: '/sources/connections',  requires: 'canManageDataSources' },
+      { icon: FolderOpen,  label: 'Fichiers',             to: '/sources/files',        requires: 'canManageDataSources' },
       { icon: Activity,    label: 'Monitoring Sources',   to: '/sources/monitoring' },
-      { icon: Code2,       label: 'Power Queries',        to: '/power-queries' },
-      { icon: FileCode,    label: 'Requêtes',             to: '/queries' },
-      { icon: GitBranch,   label: 'Pipelines ETL',        to: '/pipelines' },
-      { icon: Activity,    label: 'Exécutions ETL',       to: '/executions' },
+      { icon: Code2,       label: 'Power Queries',        to: '/power-queries',        requires: 'canManageDataSources' },
+      { icon: FileCode,    label: 'Requêtes',             to: '/queries',              requires: 'canManageDataSources' },
+      { icon: GitBranch,   label: 'Pipelines ETL',        to: '/pipelines',            requires: 'canManageETL' },
+      { icon: Activity,    label: 'Exécutions ETL',       to: '/executions',           requires: 'canManageETL' },
       { icon: ServerCog,   label: 'Data Warehouse',       to: '/warehouse' },
-      { icon: Star,        label: 'Schémas étoile',       to: '/star-schema' },
+      { icon: Star,        label: 'Schémas étoile',       to: '/star-schema',          requires: 'canManageWarehouse' },
       { icon: Brain,       label: 'ML Analytics',         to: '/ml-analytics' },
     ],
   },
@@ -62,10 +72,23 @@ const navGroups: NavGroup[] = [
     items: [
       { icon: Bookmark,    label: 'Favoris',              to: '/favorites' },
       { icon: Bell,        label: 'Notifications',        to: '/notifications' },
-      { icon: ShieldCheck, label: 'Administration',       to: '/admin' },
+      { icon: ShieldCheck, label: 'Administration',       to: '/admin',                requires: 'canAccessAdmin' },
     ],
   },
 ]
+
+const navGroups = computed<NavGroup[]>(() => {
+  const filtered = allNavGroups
+    .map((g) => ({
+      heading: g.heading,
+      items: g.items.filter((item) => {
+        if (!item.requires) return true
+        return Boolean((auth as unknown as Record<string, boolean>)[item.requires])
+      }),
+    }))
+    .filter((g) => g.items.length > 0)
+  return filtered
+})
 
 function isActive(to: string): boolean {
   return route.path.startsWith(to)
@@ -74,16 +97,16 @@ function isActive(to: string): boolean {
 const userInitials = computed(() => {
   const u = auth.user
   if (!u) return 'U'
-  const parts = [u.first_name, u.last_name].filter(Boolean)
-  return parts.length
-    ? parts.map((p) => p[0].toUpperCase()).join('')
-    : u.username[0].toUpperCase()
+  const parts = [u.first_name, u.last_name].filter((s): s is string => !!s && typeof s === 'string')
+  if (parts.length) return parts.map((p) => p[0]!.toUpperCase()).join('')
+  const fallback = u.username || u.email
+  return fallback && fallback.length > 0 ? fallback[0]!.toUpperCase() : 'U'
 })
 
 const userName = computed(() => {
   const u = auth.user
   if (!u) return 'Utilisateur'
-  return [u.first_name, u.last_name].filter(Boolean).join(' ') || u.username
+  return [u.first_name, u.last_name].filter(Boolean).join(' ') || u.username || u.email || 'Utilisateur'
 })
 </script>
 
@@ -99,6 +122,7 @@ const userName = computed(() => {
     <!-- ── Navigation ────────────────────────────────────── -->
     <nav class="sidebar-nav">
       <template v-for="group in navGroups" :key="group.heading ?? 'main'">
+
 
         <!-- Group heading -->
         <div v-if="group.heading" class="nav-group-head">

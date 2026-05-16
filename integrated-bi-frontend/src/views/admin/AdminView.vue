@@ -24,6 +24,12 @@ interface AppUser {
   last_login: string
   initials: string
   api_access_enabled?: boolean
+  first_name?: string
+  last_name?: string
+  username?: string
+  department?: string
+  job_title?: string
+  employee_id?: string
 }
 
 interface UserActivity {
@@ -167,6 +173,7 @@ const searchQuery    = ref('')
 const filterRole     = ref<UserRole | 'all'>('all')
 const filterStatus   = ref<UserStatus | 'all'>('all')
 const drawerOpen     = ref(false)
+const editUser       = ref<AppUser | null>(null)
 const deleteConfirm  = ref<string | null>(null)
 const submitting     = ref(false)
 
@@ -312,14 +319,36 @@ function auditBadgeClass(entry: UserActivity): string {
   return 'ab--login'
 }
 
+function openEditUser(user: AppUser) {
+  editUser.value = user
+  form.value = {
+    first_name:  user.first_name  ?? '',
+    last_name:   user.last_name   ?? '',
+    username:    user.username    ?? '',
+    email:       user.email,
+    role:        user.role,
+    department:  user.department  ?? '',
+    job_title:   user.job_title   ?? '',
+    employee_id: user.employee_id ?? '',
+    password:    '',
+  }
+  drawerOpen.value = true
+}
+
+function closeUserDrawer() {
+  drawerOpen.value = false
+  editUser.value   = null
+  form.value = { first_name: '', last_name: '', username: '', email: '', role: 'viewer', department: '', job_title: '', employee_id: '', password: '' }
+}
+
 async function inviteUser() {
-  if (!form.value.email.trim() || !form.value.password.trim()) return
+  if (!form.value.email.trim()) return
+  if (!editUser.value && !form.value.password.trim()) return
   submitting.value = true
   try {
     const payload: Record<string, string> = {
-      email:      form.value.email,
-      role:       form.value.role,
-      password:   form.value.password,
+      email: form.value.email,
+      role:  form.value.role,
     }
     if (form.value.first_name)  payload.first_name  = form.value.first_name
     if (form.value.last_name)   payload.last_name   = form.value.last_name
@@ -328,9 +357,17 @@ async function inviteUser() {
     if (form.value.job_title)   payload.job_title   = form.value.job_title
     if (form.value.employee_id) payload.employee_id = form.value.employee_id
 
-    await api.post('/api/users/users/', payload)
-    drawerOpen.value = false
-    form.value = { first_name: '', last_name: '', username: '', email: '', role: 'viewer', department: '', job_title: '', employee_id: '', password: '' }
+    if (editUser.value) {
+      await api.patch(`/api/users/users/${editUser.value.id}/`, payload)
+    } else {
+      payload.password = form.value.password
+      payload.password_confirm = form.value.password
+      if (!payload.username) {
+        payload.username = form.value.email.split('@')[0].replace(/[^a-zA-Z0-9._]/g, '_')
+      }
+      await api.post('/api/users/users/', payload)
+    }
+    closeUserDrawer()
     await fetchUsers()
   } catch { /* silent */ } finally {
     submitting.value = false
@@ -792,7 +829,7 @@ onMounted(() => { fetchUsers(); fetchActivities(); fetchTeams(); fetchUserStats(
               <!-- Actions -->
               <td class="utd utd--right">
                 <div class="row-actions">
-                  <button class="act-btn" title="Modifier"><Pencil :size="13" /></button>
+                  <button class="act-btn" title="Modifier" @click="openEditUser(user)"><Pencil :size="13" /></button>
                   <button
                     class="act-btn"
                     :title="user.status === 'active' ? 'Désactiver' : 'Activer'"
@@ -1571,12 +1608,12 @@ onMounted(() => { fetchUsers(); fetchActivities(); fetchTeams(); fetchUserStats(
 
     <!-- ── Invite user drawer ────────────────────────────── -->
     <Transition name="drawer-anim">
-      <div v-if="drawerOpen" class="drawer-overlay" @click.self="drawerOpen = false">
-        <aside class="drawer" role="dialog" aria-modal="true" aria-label="Créer un utilisateur">
+      <div v-if="drawerOpen" class="drawer-overlay" @click.self="closeUserDrawer">
+        <aside class="drawer" role="dialog" aria-modal="true" :aria-label="editUser ? 'Modifier l\'utilisateur' : 'Créer un utilisateur'">
 
           <div class="drawer-hd">
-            <h3 class="drawer-title">Créer un utilisateur</h3>
-            <button class="drawer-close" @click="drawerOpen = false" aria-label="Fermer">
+            <h3 class="drawer-title">{{ editUser ? 'Modifier l\'utilisateur' : 'Créer un utilisateur' }}</h3>
+            <button class="drawer-close" @click="closeUserDrawer" aria-label="Fermer">
               <X :size="18" />
             </button>
           </div>
@@ -1607,9 +1644,9 @@ onMounted(() => { fetchUsers(); fetchActivities(); fetchTeams(); fetchUserStats(
               <input id="f-email" v-model="form.email" class="form-input" type="email" placeholder="prenom.nom@sotifibre.com" required />
             </div>
 
-            <div class="form-field">
+            <div v-if="!editUser" class="form-field">
               <label class="form-label" for="f-pwd">Mot de passe temporaire <span class="req">*</span></label>
-              <input id="f-pwd" v-model="form.password" class="form-input" type="password" placeholder="••••••••" required autocomplete="new-password" />
+              <input id="f-pwd" v-model="form.password" class="form-input" type="password" placeholder="••••••••" :required="!editUser" autocomplete="new-password" />
             </div>
 
             <div class="form-row-2">
@@ -1648,9 +1685,9 @@ onMounted(() => { fetchUsers(); fetchActivities(); fetchTeams(); fetchUserStats(
             </div>
 
             <div class="drawer-footer">
-              <button type="button" class="btn-ghost" @click="drawerOpen = false">Annuler</button>
+              <button type="button" class="btn-ghost" @click="closeUserDrawer">Annuler</button>
               <button type="submit" class="btn-primary" :disabled="submitting" :class="{ 'btn-primary--loading': submitting }">
-                <span v-if="!submitting">Créer l'utilisateur</span>
+                <span v-if="!submitting">{{ editUser ? 'Enregistrer' : 'Créer l\'utilisateur' }}</span>
                 <span v-else class="spinner" aria-label="Création…"></span>
               </button>
             </div>

@@ -415,41 +415,71 @@ class DataSourceService:
             return {'success': False, 'error': str(e)}
     
     def _execute_file_query(self, query: str, params: Dict = None) -> Dict[str, Any]:
-        """Exécute une lecture de fichier"""
+        """
+        Exécute une lecture de fichier.
+
+        Formats supportés : CSV, Excel (xlsx/xls), JSON, Parquet, YAML, TSV, HTML, XML.
+        Pour HTML, retourne la première table trouvée.
+        """
         try:
-            file_format = query.lower() if query else self.data_source.file_type
-            
-            if self.data_source.file_path:
-                if file_format == 'csv':
-                    df = pd.read_csv(self.data_source.file_path, encoding=self.data_source.file_encoding)
-                elif file_format == 'excel':
-                    df = pd.read_excel(self.data_source.file_path, sheet_name=self.data_source.sheet_name or 0)
-                elif file_format == 'json':
-                    df = pd.read_json(self.data_source.file_path)
-                elif file_format == 'parquet':
-                    df = pd.read_parquet(self.data_source.file_path)
-                else:
-                    return {'success': False, 'error': f"Format non supporté: {file_format}"}
-            else:
+            file_format = (query.lower() if query else self.data_source.file_type or '').strip().lower()
+            file_path = self.data_source.file_path
+            encoding = self.data_source.file_encoding or 'utf-8'
+
+            if not file_path:
                 return {'success': False, 'error': 'Aucun fichier configuré'}
-            
+
+            if file_format == 'csv':
+                delimiter = getattr(self.data_source, 'delimiter', ',') or ','
+                df = pd.read_csv(file_path, encoding=encoding, sep=delimiter)
+            elif file_format in ('excel', 'xlsx', 'xls'):
+                df = pd.read_excel(file_path, sheet_name=self.data_source.sheet_name or 0)
+            elif file_format == 'json':
+                df = pd.read_json(file_path, encoding=encoding)
+            elif file_format == 'parquet':
+                df = pd.read_parquet(file_path)
+            elif file_format == 'tsv':
+                df = pd.read_csv(file_path, encoding=encoding, sep='\t')
+            elif file_format in ('yaml', 'yml'):
+                import yaml
+                with open(file_path, 'r', encoding=encoding) as f:
+                    payload = yaml.safe_load(f)
+                # Normaliser : si dict racine avec clé "data" / "items" / "records", l'utiliser
+                if isinstance(payload, dict):
+                    for key in ('data', 'items', 'records', 'rows'):
+                        if key in payload and isinstance(payload[key], list):
+                            payload = payload[key]
+                            break
+                df = pd.json_normalize(payload) if isinstance(payload, list) else pd.DataFrame([payload])
+            elif file_format == 'html':
+                tables = pd.read_html(file_path, encoding=encoding)
+                if not tables:
+                    return {'success': False, 'error': 'Aucune table HTML trouvée dans le fichier'}
+                # Si params['table_index'] fourni, on prend cette table, sinon la première
+                idx = (params or {}).get('table_index', 0)
+                df = tables[idx] if 0 <= idx < len(tables) else tables[0]
+            elif file_format == 'xml':
+                df = pd.read_xml(file_path, encoding=encoding)
+            else:
+                return {'success': False, 'error': f"Format non supporté: {file_format}"}
+
             # Appliquer les filtres
-            if params and 'filter' in params:
+            if params and 'filter' in params and isinstance(params['filter'], dict):
                 for col, val in params['filter'].items():
                     if col in df.columns:
                         df = df[df[col] == val]
-            
+
             # Limiter le nombre de lignes
             limit = params.get('limit', 1000) if params else 1000
             df = df.head(limit)
-            
+
             return {
                 'success': True,
                 'data': df.to_dict('records'),
                 'columns': df.columns.tolist(),
                 'row_count': len(df),
             }
-            
+
         except Exception as e:
             return {'success': False, 'error': str(e)}
     

@@ -190,9 +190,11 @@ class DataSourceAdmin(ImportExportModelAdmin):
         success_rate = obj.success_rate
         color = 'success' if success_rate >= 90 else 'warning' if success_rate >= 50 else 'danger'
         return format_html(
-            '<div><span class="badge bg-{}">{:.0f}%</span></div>'
+            '<div><span class="badge bg-{}">{}</span></div>'
             '<div><small>{}</small></div>',
-            color, float(success_rate), obj.total_queries
+            color,
+            f"{float(success_rate):.0f}%",
+            obj.total_queries
         )
     metrics_info.short_description = 'Métriques'
     

@@ -75,14 +75,29 @@ async function fetchFavorites() {
   try {
     const { data } = await api.get('/api/visualizations/favorites/')
     const rows = Array.isArray(data?.results) ? data.results : Array.isArray(data) ? data : []
-    favorites.value = rows.map((f: any): Favorite => ({
-      id:           f.id,
-      content_type: f.content_type || '',
-      object_id:    f.object_id || '',
-      item_name:    f.item_name || f.name || `Élément #${f.object_id}`,
-      item_type:    f.item_type || f.content_type || 'visualization',
-      created_at:   f.created_at || new Date().toISOString(),
-    }))
+    favorites.value = rows.map((f: any): Favorite => {
+      // The API returns separate FK fields (dashboard, kpi, report) and their names
+      let item_type: FavoriteType = 'visualization'
+      let item_name = f.item_name || f.name || ''
+      if (f.dashboard != null) {
+        item_type = 'dashboard'
+        item_name = item_name || f.dashboard_name || `Tableau de bord #${f.dashboard}`
+      } else if (f.kpi != null) {
+        item_type = 'kpi'
+        item_name = item_name || f.kpi_name || `KPI #${f.kpi}`
+      } else if (f.report != null) {
+        item_type = 'report'
+        item_name = item_name || f.report_name || `Rapport #${f.report}`
+      }
+      return {
+        id:           String(f.id),
+        content_type: item_type,
+        object_id:    String(f.dashboard ?? f.kpi ?? f.report ?? f.id),
+        item_name:    item_name || `Élément #${f.id}`,
+        item_type,
+        created_at:   f.created_at || new Date().toISOString(),
+      }
+    })
   } catch {
     favorites.value = []
   } finally {

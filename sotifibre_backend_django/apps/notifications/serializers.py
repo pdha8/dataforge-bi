@@ -5,6 +5,7 @@ Sérialiseurs pour l'application notifications
 from rest_framework import serializers
 from django.utils import timezone
 
+from apps.users.models import User
 from .models import Notification, NotificationChannel, Subscription, AlertRule
 
 
@@ -65,10 +66,14 @@ class NotificationCreateSerializer(serializers.ModelSerializer):
 
 class NotificationChannelSerializer(serializers.ModelSerializer):
     """Sérialiseur pour NotificationChannel"""
-    
+
     channel_display = serializers.CharField(source='get_channel_display', read_only=True)
     user_name = serializers.CharField(source='user.get_full_name', read_only=True)
-    
+    user = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.all(),
+        default=serializers.CurrentUserDefault()
+    )
+
     class Meta:
         model = NotificationChannel
         fields = [
@@ -78,13 +83,34 @@ class NotificationChannelSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'is_verified', 'last_used', 'error_count', 'created_at', 'updated_at']
 
+    def validate(self, attrs):
+        from .validators import validate_email, validate_phone_number, validate_webhook_url
+        from django.core.exceptions import ValidationError as DjangoValidationError
+        channel = attrs.get('channel', getattr(self.instance, 'channel', None))
+        address = attrs.get('address', getattr(self.instance, 'address', None))
+        if channel and address:
+            try:
+                if channel == 'email':
+                    validate_email(address)
+                elif channel in ('sms', 'whatsapp'):
+                    validate_phone_number(address)
+                elif channel in ('webhook', 'slack', 'teams', 'telegram'):
+                    validate_webhook_url(address)
+            except DjangoValidationError as e:
+                raise serializers.ValidationError({'address': e.messages})
+        return attrs
+
 
 class SubscriptionSerializer(serializers.ModelSerializer):
     """Sérialiseur pour Subscription"""
-    
+
     notification_type_display = serializers.CharField(source='get_notification_type_display', read_only=True)
     user_name = serializers.CharField(source='user.get_full_name', read_only=True)
-    
+    user = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.all(),
+        default=serializers.CurrentUserDefault()
+    )
+
     class Meta:
         model = Subscription
         fields = [

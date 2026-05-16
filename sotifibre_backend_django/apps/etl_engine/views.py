@@ -73,10 +73,16 @@ class ETLPipelineViewSet(viewsets.ModelViewSet):
             permission_classes = [IsAuthenticated, CanViewDataSources]
         return [permission() for permission in permission_classes]
     
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return created_response(serializer.data, "Pipeline ETL créé avec succès")
+
     def perform_create(self, serializer):
         instance = serializer.save(created_by=self.request.user)
         return instance
-    
+
     @action(detail=True, methods=['post'])
     def execute(self, request, pk=None):
         """Exécute le pipeline ETL"""
@@ -197,9 +203,15 @@ class ETLPipelineViewSet(viewsets.ModelViewSet):
             queryset.values_list('pipeline_type').annotate(count=Count('id'))
         )
         
-        total_executions = queryset.aggregate(Sum('execution_count'))['execution_count__sum'] or 0
-        avg_duration = queryset.aggregate(Avg('avg_duration_seconds'))['avg_duration_seconds__avg'] or 0
-        avg_success_rate = queryset.aggregate(Avg('success_rate'))['success_rate__avg'] or 0
+        agg = queryset.aggregate(
+            total_executions=Sum('execution_count'),
+            total_success=Sum('success_count'),
+            avg_duration=Avg('avg_duration_seconds'),
+        )
+        total_executions = agg['total_executions'] or 0
+        avg_duration = agg['avg_duration'] or 0
+        total_success = agg['total_success'] or 0
+        avg_success_rate = (total_success / total_executions * 100) if total_executions > 0 else 100.0
         
         stats_data = {
             'total': total,

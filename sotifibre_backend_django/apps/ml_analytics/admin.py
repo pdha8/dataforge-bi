@@ -228,6 +228,6 @@ class ModelTrainingLogAdmin(ImportExportModelAdmin):
         if obj.duration_ms is None:
             return "—"
         if obj.duration_ms < 1000:
-            return format_html("<b>{:.0f}</b> ms", obj.duration_ms)
-        return format_html("<b>{:.1f}</b> s", obj.duration_ms / 1000)
+            return format_html("<b>{}</b> ms", f"{obj.duration_ms:.0f}")
+        return format_html("<b>{}</b> s", f"{obj.duration_ms / 1000:.1f}")
     duration_display.short_description = "Durée"

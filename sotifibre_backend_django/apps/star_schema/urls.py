@@ -12,6 +12,8 @@ router.register(r'dimensional-schemas', views.DimensionalSchemaViewSet, basename
 router.register(r'fact-relationships', views.FactRelationshipViewSet, basename='fact-relationship')
 router.register(r'dimension-hierarchies', views.DimensionHierarchyViewSet, basename='dimension-hierarchy')
 router.register(r'calculations', views.CustomCalculationViewSet, basename='calculation')
+router.register(r'custom-calculations', views.CustomCalculationViewSet, basename='custom-calculation')
 router.register(r'galaxies', views.GalaxySchemaViewSet, basename='galaxy')
+router.register(r'galaxy-schemas', views.GalaxySchemaViewSet, basename='galaxy-schema')
 
 urlpatterns = router.urls

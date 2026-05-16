@@ -187,10 +187,13 @@ class ReportManager(models.Manager):
     def pending(self):
         """Rapports en attente de génération"""
         pending = []
-        for report in self.active().filter(schedule__isnull=False):
-            next_run = report.get_next_run()
-            if next_run and next_run <= timezone.now():
-                pending.append(report.id)
+        for report in self.active().filter(schedule__isnull=False, schedule__gt=''):
+            try:
+                next_run = report.get_next_run()
+                if next_run and next_run <= timezone.now():
+                    pending.append(report.id)
+            except Exception:
+                pass
         return self.filter(id__in=pending)
     
     def recently_generated(self, days=7):

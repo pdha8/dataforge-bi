@@ -17,7 +17,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 
 from apps.core.pagination import StandardPagination
 from apps.core.permissions import CanManageDataSources, CanViewDataSources
-from apps.core.responses import error_response, success_response
+from apps.core.responses import created_response, error_response, success_response
 
 from .filters import (
     AnomalyFilter,
@@ -74,6 +74,15 @@ class MLModelViewSet(viewsets.ModelViewSet):
             return MLModelCreateSerializer
         return MLModelSerializer
 
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return created_response(
+            MLModelSerializer(serializer.instance, context=self.get_serializer_context()).data,
+            "Modèle ML créé avec succès"
+        )
+
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
 
@@ -97,7 +106,7 @@ class MLModelViewSet(viewsets.ModelViewSet):
             )
         return error_response(
             result.get("error", "Erreur inconnue."),
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
     @action(detail=True, methods=["post"])
@@ -112,7 +121,7 @@ class MLModelViewSet(viewsets.ModelViewSet):
             return success_response(result, "Prédiction effectuée avec succès.")
         return error_response(
             result.get("error", "Erreur de prédiction."),
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
     @action(detail=True, methods=["post"])
@@ -122,7 +131,7 @@ class MLModelViewSet(viewsets.ModelViewSet):
         if not model.is_ready():
             return error_response(
                 "Le modèle doit être entraîné avant d'être déployé.",
-                status=status.HTTP_400_BAD_REQUEST,
+                status_code=status.HTTP_400_BAD_REQUEST,
             )
         model.status = "deployed"
         model.save(update_fields=["status", "updated_at"])

@@ -1,0 +1,18 @@
+{
+  "name": "bi-tests",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "test:api":        "newman run newman/bi-collection.postman_collection.json --environment newman/env.remote.postman_environment.json --color on",
+    "test:api:local":  "newman run newman/bi-collection.postman_collection.json --environment newman/env.local.postman_environment.json --color on",
+    "test:e2e":        "playwright test --config=playwright.config.ts",
+    "test:e2e:local":  "FRONTEND_URL=http://localhost:5173 playwright test --config=playwright.config.ts",
+    "test:all":        "npm run test:api && npm run test:e2e",
+    "install:browsers":"playwright install chromium"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0",
+    "newman": "^6.2.1",
+    "newman-reporter-htmlextra": "^1.23.1"
+  }
+}

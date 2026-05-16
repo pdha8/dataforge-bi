@@ -52,7 +52,16 @@ class DataWarehouseSchemaViewSet(viewsets.ModelViewSet):
         if self.action == 'create':
             return DataWarehouseSchemaCreateSerializer
         return DataWarehouseSchemaSerializer
-    
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return created_response(
+            DataWarehouseSchemaSerializer(serializer.instance, context=self.get_serializer_context()).data,
+            "Schéma créé avec succès"
+        )
+
     @action(detail=True, methods=['get'])
     def tables(self, request, pk=None):
         """Liste les tables du schéma"""
@@ -278,7 +287,16 @@ class StarSchemaViewSet(viewsets.ModelViewSet):
         if self.action == 'create':
             return StarSchemaCreateSerializer
         return StarSchemaSerializer
-    
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return created_response(
+            StarSchemaSerializer(serializer.instance, context=self.get_serializer_context()).data,
+            "Schéma en étoile créé avec succès"
+        )
+
     def get_permissions(self):
         if self.action in ['create', 'update', 'partial_update', 'destroy']:
             permission_classes = [IsAuthenticated, CanManageDataSources]  # ← Fixed

@@ -1,11 +1,31 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
 import api from '@/api/axios'
 import {
   Activity, RefreshCcw, Search, AlertCircle, AlertTriangle,
   Info, Bug, ChevronLeft, ChevronRight, Database, Cpu,
-  Wifi, Layers, Clock,
+  Wifi, Layers, Clock, FileCode2,
 } from 'lucide-vue-next'
+
+const router = useRouter()
+
+/**
+ * Ouvre l'éditeur de requêtes en préremplissant le contexte du log courant
+ * (source + message). L'utilisateur peut alors créer une vraie requête SQL
+ * au lieu de voir le simple message "Aucune requête associée à ce log".
+ */
+function createQueryFromLog(log: { id: number | string; data_source_name: string; message?: string }) {
+  router.push({
+    path: '/queries',
+    query: {
+      from_log:   String(log.id),
+      source:     log.data_source_name || '',
+      hint:       (log.message || '').slice(0, 240),
+      open:       'new',
+    },
+  })
+}
 
 // ── Types ──────────────────────────────────────────────────────
 type LogLevel = 'debug' | 'info' | 'warning' | 'error'
@@ -453,8 +473,21 @@ onUnmounted(() => {
                 </tr>
                 <tr v-else-if="expandedLogId === log.id && !log.query_text" class="expand-row">
                   <td colspan="6">
-                    <div class="expand-body">
-                      <span class="expand-label expand-label--muted">Aucune requête associée à ce log.</span>
+                    <div class="expand-body expand-body--empty">
+                      <div class="expand-empty">
+                        <span class="expand-label expand-label--muted">
+                          Aucune requête SQL n'est encore associée à ce log.
+                        </span>
+                        <button
+                          type="button"
+                          class="btn-create-query"
+                          title="Créer une nouvelle requête à partir de ce log"
+                          @click.stop="createQueryFromLog(log)"
+                        >
+                          <FileCode2 :size="14" />
+                          <span>Nouvelle requête</span>
+                        </button>
+                      </div>
                     </div>
                   </td>
                 </tr>
@@ -1048,6 +1081,42 @@ onUnmounted(() => {
 }
 
 .expand-label--muted { color: var(--text-muted); }
+
+.expand-body--empty {
+  padding-bottom: var(--sp-5);
+}
+
+.expand-empty {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  flex-wrap: wrap;
+}
+
+.btn-create-query {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-4);
+  background: var(--accent);
+  color: var(--text-on-accent, #1a1206);
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 150ms, box-shadow 150ms;
+}
+
+.btn-create-query:hover {
+  background: oklch(80% 0.14 62);
+  box-shadow: 0 4px 16px oklch(76% 0.14 62 / 0.28);
+}
 
 .expand-code {
   background: oklch(8% 0.01 258);

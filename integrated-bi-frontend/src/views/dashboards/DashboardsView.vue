@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import api from '@/api/axios'
+import { useAuthStore } from '@/stores/auth'
 import {
   Plus, Search, Star, Share2, Pencil, Copy, Trash2,
   X, ChevronDown, LayoutDashboard, Globe, FileEdit,
   Clock, Tag, Grid3x3, List, BarChart2, Download,
 } from 'lucide-vue-next'
+
+const auth = useAuthStore()
 
 // ── Types ──────────────────────────────────────────────────
 type ViewMode = 'grid' | 'list'
@@ -233,9 +236,9 @@ async function toggleStar(d: Dashboard) {
   d.starred = !d.starred
   try {
     if (!wasStar) {
-      await api.post('/api/visualizations/favorites/add/', { dashboard: d.id })
+      await api.post('/api/visualizations/favorites/add/', { item_id: d.id, item_type: 'dashboard' })
     } else {
-      await api.post('/api/visualizations/favorites/remove/', { dashboard: d.id })
+      await api.post('/api/visualizations/favorites/remove/', { item_id: d.id, item_type: 'dashboard' })
     }
   } catch {
     d.starred = wasStar
@@ -392,7 +395,11 @@ onMounted(fetchDashboards)
           {{ stats.total }} tableau{{ stats.total !== 1 ? 'x' : '' }} · {{ stats.published }} publié{{ stats.published !== 1 ? 's' : '' }}
         </p>
       </div>
-      <button class="btn-primary" @click="openDrawer">
+      <button
+        v-if="auth.canManageDashboards"
+        class="btn-primary"
+        @click="openDrawer"
+      >
         <Plus :size="15" />
         <span>Nouveau tableau</span>
       </button>

@@ -71,14 +71,14 @@ class DashboardCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Dashboard
         fields = [
-            'name', 'description', 'dashboard_type', 'layout', 'theme',
+            'id', 'name', 'description', 'dashboard_type', 'layout', 'theme',
             'global_filters', 'refresh_frequency', 'auto_refresh',
             'tags', 'category', 'access_level', 'owner', 'team',
             'allow_export', 'default_export_format'
         ]
+        read_only_fields = ['id']
     
     def create(self, validated_data):
-        validated_data['created_by'] = self.context['request'].user
         return super().create(validated_data)
 
 

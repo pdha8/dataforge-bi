@@ -67,6 +67,15 @@ class NotificationViewSet(viewsets.ModelViewSet):
             permission_classes = [IsAuthenticated]
         return [permission() for permission in permission_classes]
     
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return created_response(
+            NotificationSerializer(serializer.instance, context=self.get_serializer_context()).data,
+            "Notification créée avec succès"
+        )
+
     def perform_create(self, serializer):
         """Crée une notification et l'envoie immédiatement"""
         notification = serializer.save()
@@ -74,7 +83,7 @@ class NotificationViewSet(viewsets.ModelViewSet):
         for channel in notification.channels:
             service.send(notification, channel)
         return notification
-    
+
     @action(detail=True, methods=['post'])
     def mark_read(self, request, pk=None):
         """
@@ -154,12 +163,25 @@ class NotificationChannelViewSet(viewsets.ModelViewSet):
             return NotificationChannel.objects.all()
         return NotificationChannel.objects.filter(user=user)
     
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return created_response(
+            NotificationChannelSerializer(serializer.instance, context=self.get_serializer_context()).data,
+            "Canal créé avec succès"
+        )
+
     def perform_create(self, serializer):
         """Crée un canal et génère un token de vérification"""
-        instance = serializer.save(user=self.request.user)
+        if 'user' not in serializer.validated_data:
+            serializer.save(user=self.request.user)
+        else:
+            serializer.save()
+        instance = serializer.instance
         instance.generate_verification_token()
         return instance
-    
+
     @action(detail=True, methods=['post'])
     def verify(self, request, pk=None):
         """
@@ -224,6 +246,15 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
             return Subscription.objects.all()
         return Subscription.objects.filter(user=user)
     
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return created_response(
+            SubscriptionSerializer(serializer.instance, context=self.get_serializer_context()).data,
+            "Abonnement créé avec succès"
+        )
+
     def perform_create(self, serializer):
         """Crée un abonnement pour l'utilisateur connecté"""
         return serializer.save(user=self.request.user)
@@ -251,10 +282,19 @@ class AlertRuleViewSet(viewsets.ModelViewSet):
             return AlertRuleCreateSerializer
         return AlertRuleSerializer
     
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return created_response(
+            AlertRuleSerializer(serializer.instance, context=self.get_serializer_context()).data,
+            "Règle d'alerte créée avec succès"
+        )
+
     def perform_create(self, serializer):
         """Crée une règle d'alerte"""
         return serializer.save()
-    
+
     @action(detail=True, methods=['post'])
     def test(self, request, pk=None):
         """

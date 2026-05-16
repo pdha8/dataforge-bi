@@ -2,22 +2,23 @@
 import { ref, computed, onMounted } from 'vue'
 import api from '@/api/axios'
 import {
-  FolderOpen, Search, Plus, RefreshCcw, Trash2, Eye,
+  FolderOpen, Search, RefreshCcw, Trash2, Eye,
   Play, X, ChevronDown, Upload, FileText, CheckCircle2,
-  AlertTriangle, Clock,
+  AlertTriangle, Clock, Edit2,
 } from 'lucide-vue-next'
 
 // ── Types ──────────────────────────────────────────────────
 interface DataFile {
   id: string
   name: string
+  original_name: string
   file_type: string
   file_size: number
   status: string
   row_count: number | null
   column_count: number | null
-  source: string | null
-  source_name: string
+  data_source: string | null
+  data_source_name: string | null
   created_at: string
   updated_at: string
   is_processed: boolean
@@ -29,39 +30,53 @@ interface FilePreview {
   total_rows: number
 }
 
+const FILE_TYPE_OPTIONS = [
+  { value: 'csv',  label: 'CSV' },
+  { value: 'xlsx', label: 'Excel (XLSX)' },
+  { value: 'yaml', label: 'YAML' },
+  { value: 'json', label: 'JSON' },
+  { value: 'tsv',  label: 'TSV (Tabulé)' },
+  { value: 'html', label: 'HTML' },
+]
+
 const STATUS_META: Record<string, { label: string; cls: string }> = {
   pending:    { label: 'En attente',  cls: 'st--pending'  },
   processing: { label: 'Traitement', cls: 'st--running'  },
-  processed:  { label: 'Traité',     cls: 'st--success'  },
+  completed:  { label: 'Traité',     cls: 'st--success'  },
   error:      { label: 'Erreur',     cls: 'st--error'    },
 }
 
 // ── State ──────────────────────────────────────────────────
-const files        = ref<DataFile[]>([])
-const loading      = ref(true)
-const listVisible  = ref(false)
-const refreshing   = ref(false)
-const searchQuery  = ref('')
-const filterType   = ref('all')
+const files          = ref<DataFile[]>([])
+const loading        = ref(true)
+const listVisible    = ref(false)
+const refreshing     = ref(false)
+const searchQuery    = ref('')
+const filterType     = ref('all')
 
-const drawerOpen   = ref(false)
-const submitting   = ref(false)
-const formError    = ref<string | null>(null)
-const selectedFile = ref<File | null>(null)
-const form = ref({ name: '', source: '', file_type: 'csv' })
+const drawerOpen     = ref(false)
+const editingFile    = ref<DataFile | null>(null)
+const submitting     = ref(false)
+const formError      = ref<string | null>(null)
+const selectedFile   = ref<File | null>(null)
 
-const previewFile  = ref<DataFile | null>(null)
-const preview      = ref<FilePreview | null>(null)
+const form = ref({ name: '', file_type: 'csv' })
+
+const previewFile    = ref<DataFile | null>(null)
+const preview        = ref<FilePreview | null>(null)
 const previewLoading = ref(false)
 
-const processingId = ref<string | null>(null)
-const deleteConfirm = ref<string | null>(null)
+const processingId   = ref<string | null>(null)
+const deleteConfirm  = ref<string | null>(null)
 
 // ── Computed ───────────────────────────────────────────────
+const drawerTitle = computed(() => editingFile.value ? 'Modifier le fichier' : 'Importer un fichier')
+const isEdit      = computed(() => !!editingFile.value)
+
 const filtered = computed(() => {
   const q = searchQuery.value.toLowerCase()
   return files.value.filter(f => {
-    const matchSearch = !q || f.name.toLowerCase().includes(q) || (f.source_name || '').toLowerCase().includes(q)
+    const matchSearch = !q || (f.name || f.original_name).toLowerCase().includes(q)
     const matchType   = filterType.value === 'all' || f.file_type === filterType.value
     return matchSearch && matchType
   })
@@ -74,13 +89,11 @@ const stats = computed(() => ({
   errors:     files.value.filter(f => f.status === 'error').length,
 }))
 
-const fileTypes = computed(() => [...new Set(files.value.map(f => f.file_type).filter(Boolean))])
-
 // ── Helpers ────────────────────────────────────────────────
 function fmtSize(bytes: number): string {
   if (!bytes) return '—'
-  if (bytes < 1024)       return `${bytes} B`
-  if (bytes < 1048576)    return `${(bytes / 1024).toFixed(1)} KB`
+  if (bytes < 1024)    return `${bytes} B`
+  if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`
   return `${(bytes / 1048576).toFixed(2)} MB`
 }
 
@@ -98,6 +111,10 @@ function statusMeta(s: string) {
   return STATUS_META[s] ?? { label: s, cls: 'st--pending' }
 }
 
+function displayName(f: DataFile): string {
+  return f.name || f.original_name || '—'
+}
+
 // ── API ────────────────────────────────────────────────────
 async function fetchFiles() {
   loading.value = true
@@ -106,18 +123,19 @@ async function fetchFiles() {
     const { data } = await api.get('/api/data-sources/files/')
     const rows = Array.isArray(data?.results) ? data.results : Array.isArray(data) ? data : []
     files.value = rows.map((f: any): DataFile => ({
-      id:            f.id,
-      name:          f.name || f.file_name || '',
-      file_type:     f.file_type || f.format || 'csv',
-      file_size:     f.file_size ?? 0,
-      status:        f.status || 'pending',
-      row_count:     f.row_count ?? null,
-      column_count:  f.column_count ?? null,
-      source:        f.source ?? null,
-      source_name:   f.source_name || '',
-      created_at:    f.created_at || new Date().toISOString(),
-      updated_at:    f.updated_at || f.created_at || new Date().toISOString(),
-      is_processed:  f.is_processed ?? f.status === 'processed',
+      id:              f.id,
+      name:            f.name || '',
+      original_name:   f.original_name || f.file_name || '',
+      file_type:       f.file_type || 'csv',
+      file_size:       f.file_size ?? 0,
+      status:          f.process_status || f.status || 'pending',
+      row_count:       f.row_count ?? null,
+      column_count:    f.column_count ?? null,
+      data_source:     f.data_source ?? null,
+      data_source_name: f.data_source_name || null,
+      created_at:      f.created_at || new Date().toISOString(),
+      updated_at:      f.updated_at || f.created_at || new Date().toISOString(),
+      is_processed:    f.is_processed ?? f.process_status === 'completed',
     }))
   } catch {
     files.value = []
@@ -133,23 +151,55 @@ async function refresh() {
   refreshing.value = false
 }
 
-async function uploadFile() {
-  if (!selectedFile.value) return
+function openCreateDrawer() {
+  editingFile.value = null
+  selectedFile.value = null
+  form.value = { name: '', file_type: 'csv' }
+  formError.value = null
+  drawerOpen.value = true
+}
+
+function openEditDrawer(file: DataFile) {
+  editingFile.value = file
+  selectedFile.value = null
+  form.value = { name: displayName(file), file_type: file.file_type || 'csv' }
+  formError.value = null
+  drawerOpen.value = true
+}
+
+function closeDrawer() {
+  drawerOpen.value = false
+  editingFile.value = null
+  selectedFile.value = null
+  formError.value = null
+}
+
+async function submitForm() {
   submitting.value = true
   formError.value = null
-  const fd = new FormData()
-  fd.append('file', selectedFile.value)
-  if (form.value.name.trim()) fd.append('name', form.value.name.trim())
-  if (form.value.source.trim()) fd.append('source', form.value.source.trim())
-  fd.append('file_type', form.value.file_type)
   try {
-    await api.post('/api/data-sources/files/', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
-    drawerOpen.value = false
-    selectedFile.value = null
-    form.value = { name: '', source: '', file_type: 'csv' }
+    if (isEdit.value && editingFile.value) {
+      // PATCH — mise à jour du nom et du type
+      await api.patch(`/api/data-sources/files/${editingFile.value.id}/`, {
+        name:      form.value.name.trim(),
+        file_type: form.value.file_type,
+      })
+    } else {
+      // POST — upload nouveau fichier
+      if (!selectedFile.value) return
+      const fd = new FormData()
+      fd.append('file', selectedFile.value)
+      if (form.value.name.trim()) fd.append('name', form.value.name.trim())
+      fd.append('file_type', form.value.file_type)
+      await api.post('/api/data-sources/files/', fd, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+    }
+    closeDrawer()
     await fetchFiles()
   } catch (err: any) {
-    formError.value = err?.response?.data?.detail ?? err?.response?.data?.message ?? 'Erreur lors de l\'upload.'
+    const d = err?.response?.data
+    formError.value = d?.detail ?? d?.message ?? JSON.stringify(d) ?? "Erreur lors de l'opération."
   } finally {
     submitting.value = false
   }
@@ -172,9 +222,9 @@ async function openPreview(file: DataFile) {
   try {
     const { data } = await api.get(`/api/data-sources/files/${file.id}/preview/`)
     preview.value = {
-      headers:    data.headers ?? data.columns ?? [],
-      rows:       data.rows ?? data.data ?? [],
-      total_rows: data.total_rows ?? data.row_count ?? 0,
+      headers:    data.data?.schema ? Object.keys(data.data.schema) : data.headers ?? data.columns ?? [],
+      rows:       data.data?.preview ?? data.rows ?? data.data ?? [],
+      total_rows: data.data?.row_count ?? data.total_rows ?? data.row_count ?? 0,
     }
   } catch {
     preview.value = { headers: [], rows: [], total_rows: 0 }
@@ -194,15 +244,19 @@ async function deleteFile(id: string) {
 
 function onFileInput(event: Event) {
   const input = event.target as HTMLInputElement
-  if (input.files && input.files[0]) {
+  if (input.files?.[0]) {
     selectedFile.value = input.files[0]
     if (!form.value.name) {
       form.value.name = input.files[0].name.replace(/\.[^.]+$/, '')
     }
     const ext = input.files[0].name.split('.').pop()?.toLowerCase()
-    if (ext === 'csv' || ext === 'json' || ext === 'xlsx' || ext === 'xml' || ext === 'parquet') {
-      form.value.file_type = ext
+    const extMap: Record<string, string> = {
+      csv: 'csv', xlsx: 'xlsx', xls: 'xlsx',
+      yaml: 'yaml', yml: 'yaml',
+      json: 'json', tsv: 'tsv',
+      html: 'html', htm: 'html',
     }
+    if (ext && extMap[ext]) form.value.file_type = extMap[ext]
   }
 }
 
@@ -227,7 +281,7 @@ onMounted(fetchFiles)
         >
           <RefreshCcw :size="14" />
         </button>
-        <button class="btn-primary" @click="drawerOpen = true">
+        <button class="btn-primary" @click="openCreateDrawer">
           <Upload :size="15" />
           <span>Importer un fichier</span>
         </button>
@@ -270,7 +324,7 @@ onMounted(fetchFiles)
       <div class="select-wrap">
         <select v-model="filterType" class="filter-select">
           <option value="all">Tous les formats</option>
-          <option v-for="t in fileTypes" :key="t" :value="t">{{ t.toUpperCase() }}</option>
+          <option v-for="t in FILE_TYPE_OPTIONS" :key="t.value" :value="t.value">{{ t.label }}</option>
         </select>
         <ChevronDown :size="13" class="select-arrow" />
       </div>
@@ -285,8 +339,8 @@ onMounted(fetchFiles)
     <div v-else-if="filtered.length === 0" class="empty-state">
       <FolderOpen :size="40" class="empty-icon" />
       <p class="empty-title">{{ files.length === 0 ? 'Aucun fichier importé' : 'Aucun résultat' }}</p>
-      <p class="empty-sub">Importez un fichier CSV, Excel, JSON ou Parquet pour commencer.</p>
-      <button class="btn-primary" @click="drawerOpen = true">
+      <p class="empty-sub">Importez un fichier CSV, Excel, JSON, YAML, TSV ou HTML.</p>
+      <button class="btn-primary" @click="openCreateDrawer">
         <Upload :size="14" />
         <span>Importer un fichier</span>
       </button>
@@ -314,13 +368,13 @@ onMounted(fetchFiles)
         >
           <div class="cell-name">
             <FileText :size="14" class="file-icon" />
-            <span>{{ file.name }}</span>
+            <span>{{ displayName(file) }}</span>
           </div>
           <span class="cell-badge cell-badge--type">{{ file.file_type.toUpperCase() }}</span>
           <span class="cell-muted">{{ fmtSize(file.file_size) }}</span>
           <span class="cell-muted">{{ file.row_count?.toLocaleString('fr-FR') ?? '—' }}</span>
           <span class="cell-muted">{{ file.column_count ?? '—' }}</span>
-          <span class="cell-muted">{{ file.source_name || '—' }}</span>
+          <span class="cell-muted">{{ file.data_source_name || '—' }}</span>
           <span class="status-chip" :class="statusMeta(file.status).cls">
             {{ statusMeta(file.status).label }}
           </span>
@@ -328,6 +382,9 @@ onMounted(fetchFiles)
           <div class="cell-actions">
             <button class="act-btn" title="Aperçu" @click="openPreview(file)">
               <Eye :size="13" />
+            </button>
+            <button class="act-btn" title="Modifier" @click="openEditDrawer(file)">
+              <Edit2 :size="13" />
             </button>
             <button
               class="act-btn act-btn--run"
@@ -342,7 +399,7 @@ onMounted(fetchFiles)
               <button class="act-btn act-btn--yes" @click="deleteFile(file.id)">Oui</button>
               <button class="act-btn" @click="deleteConfirm = null">Non</button>
             </template>
-            <button v-else class="act-btn act-btn--del" @click="deleteConfirm = file.id">
+            <button v-else class="act-btn act-btn--del" title="Supprimer" @click="deleteConfirm = file.id">
               <Trash2 :size="13" />
             </button>
           </div>
@@ -350,22 +407,24 @@ onMounted(fetchFiles)
       </div>
     </template>
 
-    <!-- ── Upload drawer ────────────────────────────────────── -->
+    <!-- ── Create / Edit drawer ────────────────────────────── -->
     <Transition name="drawer-anim">
-      <div v-if="drawerOpen" class="drawer-overlay" @click.self="drawerOpen = false">
-        <aside class="drawer" role="dialog" aria-modal="true" aria-label="Importer un fichier">
+      <div v-if="drawerOpen" class="drawer-overlay" @click.self="closeDrawer">
+        <aside class="drawer" role="dialog" aria-modal="true" :aria-label="drawerTitle">
           <div class="drawer-hd">
-            <h3 class="drawer-title">Importer un fichier</h3>
-            <button class="drawer-close" @click="drawerOpen = false"><X :size="18" /></button>
+            <h3 class="drawer-title">{{ drawerTitle }}</h3>
+            <button class="drawer-close" @click="closeDrawer"><X :size="18" /></button>
           </div>
-          <form class="drawer-form" @submit.prevent="uploadFile">
+          <form class="drawer-form" @submit.prevent="submitForm">
 
-            <div class="form-field">
+            <!-- Fichier (CREATE uniquement) -->
+            <div v-if="!isEdit" class="form-field">
               <label class="form-label">Fichier <span class="req">*</span></label>
               <input
+                id="f-file"
                 type="file"
                 class="form-input"
-                accept=".csv,.json,.xlsx,.xls,.xml,.parquet,.txt"
+                accept=".csv,.xlsx,.xls,.yaml,.yml,.json,.tsv,.html,.htm"
                 @change="onFileInput"
                 required
               />
@@ -375,20 +434,23 @@ onMounted(fetchFiles)
             </div>
 
             <div class="form-field">
-              <label class="form-label">Nom affiché</label>
-              <input v-model="form.name" class="form-input" type="text" placeholder="Nom du fichier (optionnel)" />
+              <label class="form-label" for="f-fname">Nom affiché</label>
+              <input
+                id="f-fname"
+                v-model="form.name"
+                class="form-input"
+                type="text"
+                placeholder="Nom du fichier (optionnel)"
+              />
             </div>
 
             <div class="form-field">
-              <label class="form-label">Format</label>
+              <label class="form-label" for="f-ftype">Format</label>
               <div class="select-wrap">
-                <select v-model="form.file_type" class="form-input">
-                  <option value="csv">CSV</option>
-                  <option value="json">JSON</option>
-                  <option value="xlsx">Excel (XLSX)</option>
-                  <option value="xml">XML</option>
-                  <option value="parquet">Parquet</option>
-                  <option value="txt">Texte</option>
+                <select id="f-ftype" v-model="form.file_type" class="form-input">
+                  <option v-for="t in FILE_TYPE_OPTIONS" :key="t.value" :value="t.value">
+                    {{ t.label }}
+                  </option>
                 </select>
                 <ChevronDown :size="13" class="select-arrow" />
               </div>
@@ -397,10 +459,10 @@ onMounted(fetchFiles)
             <div v-if="formError" class="form-error">{{ formError }}</div>
 
             <div class="drawer-foot">
-              <button type="button" class="btn-ghost" @click="drawerOpen = false">Annuler</button>
-              <button type="submit" class="btn-primary" :disabled="submitting || !selectedFile">
+              <button type="button" class="btn-ghost" @click="closeDrawer">Annuler</button>
+              <button type="submit" class="btn-primary" :disabled="submitting || (!isEdit && !selectedFile)">
                 <span v-if="submitting" class="btn-spinner"></span>
-                {{ submitting ? 'Upload en cours…' : 'Importer' }}
+                {{ submitting ? (isEdit ? 'Enregistrement…' : 'Upload en cours…') : (isEdit ? 'Enregistrer' : 'Importer') }}
               </button>
             </div>
           </form>
@@ -413,7 +475,7 @@ onMounted(fetchFiles)
       <div v-if="previewFile" class="modal-overlay" @click.self="previewFile = null">
         <div class="preview-modal">
           <div class="preview-hd">
-            <h3 class="preview-title">{{ previewFile.name }}</h3>
+            <h3 class="preview-title">{{ displayName(previewFile) }}</h3>
             <button class="drawer-close" @click="previewFile = null"><X :size="18" /></button>
           </div>
           <div class="preview-body">
@@ -434,7 +496,7 @@ onMounted(fetchFiles)
                   </thead>
                   <tbody>
                     <tr v-for="(row, ri) in preview.rows" :key="ri">
-                      <td v-for="(cell, ci) in row" :key="ci">{{ cell }}</td>
+                      <td v-for="(cell, ci) in (Array.isArray(row) ? row : Object.values(row))" :key="ci">{{ cell }}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -485,7 +547,7 @@ onMounted(fetchFiles)
 .files-table--visible { opacity: 1; }
 .table-hd {
   display: grid;
-  grid-template-columns: 1fr 70px 80px 80px 70px 120px 90px 100px 130px;
+  grid-template-columns: 1fr 70px 80px 80px 70px 120px 90px 100px 160px;
   padding: var(--sp-2) var(--sp-4);
   background: var(--surface-overlay);
   border-bottom: 1px solid var(--border-subtle);
@@ -494,7 +556,7 @@ onMounted(fetchFiles)
 }
 .table-row {
   display: grid;
-  grid-template-columns: 1fr 70px 80px 80px 70px 120px 90px 100px 130px;
+  grid-template-columns: 1fr 70px 80px 80px 70px 120px 90px 100px 160px;
   align-items: center; gap: var(--sp-3);
   padding: var(--sp-3) var(--sp-4);
   background: var(--surface-raised);

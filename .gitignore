@@ -40,3 +40,20 @@ Thumbs.db
 
 # ── Locks (reproductibilité gérée par CI) ───────────────────
 uv.lock
+
+# ── Tests E2E Playwright ────────────────────────────────────
+tests/node_modules/
+tests/playwright-report/
+tests/.auth/
+test-results/
+
+# ── Working / tmp ───────────────────────────────────────────
+_tmp_Integrated_BI/
+*.tmp
+~$*
+
+# ── Documents binaires lourds (hors README) ─────────────────
+*.docx
+*.pdf
+*.exe
+*.webp

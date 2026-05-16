@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import api from '@/api/axios'
+import { useAuthStore } from '@/stores/auth'
 import {
   Plus, Search, Play, Square, RotateCcw, Pause,
   Trash2, Pencil, X, ChevronDown, Timer, CalendarClock,
@@ -8,6 +9,8 @@ import {
   Mail, MessageSquare, Webhook, Hash, Bell, Zap,
   Loader2,
 } from 'lucide-vue-next'
+
+const auth = useAuthStore()
 
 // ── Types ──────────────────────────────────────────────────
 type PipelineStatus = 'draft' | 'active' | 'paused' | 'error' | 'archived' | 'deprecated' | 'running' | 'success' | 'failed' | 'scheduled'
@@ -359,7 +362,7 @@ const form = ref({
   schedule_label: 'Quotidien', cron: '0 2 * * *', description: '',
   pipeline_type: 'full_load', processing_mode: 'sequential', error_strategy: 'fail_fast',
   batch_size: '', timeout_seconds: '', max_errors: '',
-  priority: 'medium', category: '', tags: '',
+  priority: 5, category: '', tags: '',
   notifications_enabled: false,
   // Politique de réessai
   retry_max_attempts: '3',
@@ -370,6 +373,34 @@ const form = ref({
   notify_on_start: false,
   notify_on_failure: true,
 })
+
+// Drapeau : le nom a été édité manuellement par l'utilisateur
+// → on cesse l'auto-génération à partir de Source → Destination
+const nameTouched = ref(false)
+
+function onPipelineNameInput() {
+  nameTouched.value = true
+}
+
+/**
+ * Construit "Source → Destination" à partir des selects.
+ * Appelé automatiquement quand source ou destination changent,
+ * tant que l'utilisateur n'a pas saisi un nom manuel.
+ */
+function autoBuildPipelineName() {
+  if (nameTouched.value) return
+  const srcName = dataSources.value.find(s => s.id === form.value.source)?.name
+  const dstName = dataSources.value.find(s => s.id === form.value.destination)?.name
+  if (srcName && dstName) {
+    form.value.name = `${srcName} → ${dstName}`
+  } else if (srcName) {
+    form.value.name = `${srcName} → …`
+  } else if (dstName) {
+    form.value.name = `… → ${dstName}`
+  }
+}
+
+watch(() => [form.value.source, form.value.destination], autoBuildPipelineName)
 
 // ── Computed ───────────────────────────────────────────────
 const filteredPipelines = computed(() => {
@@ -512,12 +543,13 @@ async function deletePipeline(id: string) {
 function openDrawer() {
   editPipeline.value = null
   formError.value = null
+  nameTouched.value = false   // reset auto-generation flag pour un nouveau pipeline
   form.value = {
     name: '', source: '', destination: '',
     schedule_label: 'Quotidien', cron: '0 2 * * *', description: '',
-    pipeline_type: 'full_load', processing_mode: 'sequential', error_strategy: 'fail_fast',
+    pipeline_type: 'etl', processing_mode: 'batch', error_strategy: 'fail',
     batch_size: '', timeout_seconds: '', max_errors: '',
-    priority: 'medium', category: '', tags: '',
+    priority: 5 as number, category: '', tags: '',
     notifications_enabled: false,
     retry_max_attempts: '3', retry_backoff_factor: '2.0', retry_delay_seconds: '5',
     notify_on_success: false, notify_on_start: false, notify_on_failure: true,
@@ -528,13 +560,14 @@ function openDrawer() {
 function openEditDrawer(p: Pipeline) {
   editPipeline.value = p
   formError.value = null
+  nameTouched.value = true   // un pipeline existant a déjà un nom — on ne le réécrit pas
   form.value = {
     name: p.name, source: p.source_name || '', destination: p.target_name || '',
     schedule_label: p.schedule_frequency_display || 'Manuel',
     cron: p.schedule_cron || '', description: p.description || '',
-    pipeline_type: 'full_load', processing_mode: 'sequential', error_strategy: 'fail_fast',
+    pipeline_type: 'etl', processing_mode: 'batch', error_strategy: 'fail',
     batch_size: '', timeout_seconds: '', max_errors: '',
-    priority: 'medium', category: '', tags: '',
+    priority: 5 as number, category: '', tags: '',
     notifications_enabled: false,
     retry_max_attempts: '3', retry_backoff_factor: '2.0', retry_delay_seconds: '5',
     notify_on_success: false, notify_on_start: false, notify_on_failure: true,
@@ -558,7 +591,7 @@ async function submitForm() {
     pipeline_type:         form.value.pipeline_type,
     processing_mode:       form.value.processing_mode,
     error_strategy:        form.value.error_strategy,
-    priority:              form.value.priority,
+    priority:              Number(form.value.priority) || 5,
     category:              form.value.category,
     tags:                  form.value.tags ? form.value.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
     notifications_enabled: form.value.notifications_enabled,
@@ -575,8 +608,9 @@ async function submitForm() {
     payload.notify_on_failure = form.value.notify_on_failure
   }
 
-  if (form.value.source)      payload.source      = form.value.source
-  if (form.value.destination) payload.destination = form.value.destination
+  // Backend ETLPipeline attend `source` et `target` (FK), pas `destination`
+  if (form.value.source)      payload.source = form.value.source
+  if (form.value.destination) payload.target = form.value.destination
 
   try {
     if (editPipeline.value) {
@@ -778,7 +812,11 @@ onMounted(() => {
           {{ stats.total }} pipeline{{ stats.total !== 1 ? 's' : '' }} configuré{{ stats.total !== 1 ? 's' : '' }}
         </p>
       </div>
-      <button class="btn-primary" @click="openDrawer">
+      <button
+        v-if="auth.canManageETL"
+        class="btn-primary"
+        @click="openDrawer"
+      >
         <Plus :size="15" />
         <span>Nouveau pipeline</span>
       </button>
@@ -1057,17 +1095,11 @@ onMounted(() => {
 
           <form class="drawer-form" @submit.prevent="submitForm">
 
-            <!-- Name -->
-            <div class="form-field">
-              <label class="form-label" for="pl-name">Nom du pipeline <span class="req">*</span></label>
-              <input id="pl-name" v-model="form.name" class="form-input" type="text" placeholder="Ex : Ventes → DW Mensuel" required />
-            </div>
-
             <!-- Source -->
             <div class="form-field">
-              <label class="form-label">Source de données</label>
+              <label class="form-label" for="pl-source">Source de données <span class="req">*</span></label>
               <div class="select-wrap">
-                <select v-model="form.source" class="form-input">
+                <select id="pl-source" v-model="form.source" class="form-input" required>
                   <option value="">— Sélectionner une source —</option>
                   <option v-for="src in dataSources" :key="src.id" :value="src.id">
                     {{ src.name }} <template v-if="src.source_type">({{ src.source_type }})</template>
@@ -1079,9 +1111,9 @@ onMounted(() => {
 
             <!-- Destination -->
             <div class="form-field">
-              <label class="form-label">Destination (source cible)</label>
+              <label class="form-label" for="pl-dest">Destination (source cible) <span class="req">*</span></label>
               <div class="select-wrap">
-                <select v-model="form.destination" class="form-input">
+                <select id="pl-dest" v-model="form.destination" class="form-input" required>
                   <option value="">— Sélectionner une destination —</option>
                   <option v-for="src in dataSources" :key="src.id" :value="src.id">
                     {{ src.name }} <template v-if="src.source_type">({{ src.source_type }})</template>
@@ -1089,6 +1121,23 @@ onMounted(() => {
                 </select>
                 <ChevronDown :size="13" class="select-arrow" />
               </div>
+            </div>
+
+            <!-- Name : auto-généré à partir des sélecteurs Source → Destination -->
+            <div class="form-field">
+              <label class="form-label" for="pl-name">
+                Nom du pipeline <span class="req">*</span>
+                <span v-if="!nameTouched && (form.source || form.destination)" class="opt">(auto-généré)</span>
+              </label>
+              <input
+                id="pl-name"
+                v-model="form.name"
+                class="form-input"
+                type="text"
+                placeholder="Sélectionnez Source et Destination pour générer le nom"
+                required
+                @input="onPipelineNameInput"
+              />
             </div>
 
             <!-- Schedule -->
@@ -1152,23 +1201,27 @@ onMounted(() => {
                     <label class="form-label">Type de pipeline</label>
                     <div class="select-wrap w100">
                       <select v-model="form.pipeline_type" class="form-select w100">
-                        <option value="full_load">Chargement complet</option>
-                        <option value="incremental">Incrémental</option>
-                        <option value="cdc">CDC</option>
-                        <option value="streaming">Streaming</option>
-                        <option value="micro_batch">Micro-batch</option>
+                        <option value="etl">ETL (Extract-Transform-Load)</option>
+                        <option value="elt">ELT (Extract-Load-Transform)</option>
+                        <option value="extract">Extract Only</option>
+                        <option value="load">Load Only</option>
+                        <option value="replication">Réplication</option>
+                        <option value="migration">Migration</option>
+                        <option value="aggregation">Agrégation</option>
+                        <option value="cleaning">Nettoyage</option>
                       </select>
                       <ChevronDown :size="13" class="select-arrow" />
                     </div>
                   </div>
                   <div class="form-field">
-                    <label class="form-label">Priorité</label>
+                    <label class="form-label">Priorité (1 = haute, 10 = basse)</label>
                     <div class="select-wrap w100">
-                      <select v-model="form.priority" class="form-select w100">
-                        <option value="low">Faible</option>
-                        <option value="medium">Normale</option>
-                        <option value="high">Haute</option>
-                        <option value="critical">Critique</option>
+                      <select v-model.number="form.priority" class="form-select w100">
+                        <option :value="1">1 — Critique</option>
+                        <option :value="3">3 — Haute</option>
+                        <option :value="5">5 — Normale</option>
+                        <option :value="7">7 — Faible</option>
+                        <option :value="10">10 — Différable</option>
                       </select>
                       <ChevronDown :size="13" class="select-arrow" />
                     </div>
@@ -1180,13 +1233,10 @@ onMounted(() => {
                     <label class="form-label">Mode de traitement</label>
                     <div class="select-wrap w100">
                       <select v-model="form.processing_mode" class="form-select w100">
-                        <option value="sequential">Séquentiel</option>
-                        <option value="parallel">Parallèle</option>
-                        <option value="distributed">Distribué</option>
                         <option value="batch">Batch</option>
                         <option value="streaming">Streaming</option>
-                        <option value="micro_batch">Micro-batch</option>
-                        <option value="real_time">Temps réel</option>
+                        <option value="incremental">Incrémental</option>
+                        <option value="full">Full Refresh</option>
                       </select>
                       <ChevronDown :size="13" class="select-arrow" />
                     </div>
@@ -1195,13 +1245,12 @@ onMounted(() => {
                     <label class="form-label">Stratégie d'erreur</label>
                     <div class="select-wrap w100">
                       <select v-model="form.error_strategy" class="form-select w100">
-                        <option value="fail_fast">Arrêt immédiat</option>
-                        <option value="fail">Échec</option>
-                        <option value="skip_errors">Ignorer les erreurs</option>
-                        <option value="skip">Ignorer</option>
-                        <option value="log_and_continue">Journaliser et continuer</option>
+                        <option value="fail">Échec pipeline</option>
+                        <option value="skip">Ignorer la ligne</option>
+                        <option value="default">Valeur par défaut</option>
                         <option value="retry">Réessayer</option>
-                        <option value="dead_letter">File morte</option>
+                        <option value="notify">Notifier uniquement</option>
+                        <option value="continue">Continuer</option>
                       </select>
                       <ChevronDown :size="13" class="select-arrow" />
                     </div>

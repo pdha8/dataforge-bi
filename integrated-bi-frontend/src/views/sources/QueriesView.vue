@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import api from '@/api/axios'
+
+const route = useRoute()
 import {
   Search, Plus, Play, Save, Trash2, Pencil, Star,
   RefreshCcw, Database, Code2, FileCode,
@@ -310,6 +313,25 @@ async function quickExecute(q: DataQuery) {
 // ── Mount ─────────────────────────────────────────────────
 onMounted(async () => {
   await Promise.all([fetchQueries(), fetchSources()])
+
+  // Préremplissage depuis SourceMonitoringView : /queries?open=new&source=…&hint=…&from_log=…
+  if (route.query.open === 'new') {
+    openNew()
+    const srcParam = String(route.query.source || '').trim()
+    if (srcParam) {
+      // si on a un nom de source, on tente de le résoudre en id via la liste chargée
+      const match = sources.value.find(s => s.name === srcParam || String(s.id) === srcParam)
+      if (match) edSource.value = match.id
+    }
+    const hint = String(route.query.hint || '').trim()
+    const fromLog = String(route.query.from_log || '').trim()
+    if (hint || fromLog) {
+      const prefix = fromLog ? `-- Requête générée depuis le log #${fromLog}\n` : ''
+      const body   = hint ? `-- Contexte : ${hint}\n\n` : ''
+      edText.value = `${prefix}${body}SELECT *\nFROM ${srcParam || 'ma_table'}\nLIMIT 100;`
+      if (!edName.value && srcParam) edName.value = `Requête ${srcParam} ${new Date().toLocaleDateString('fr-FR')}`
+    }
+  }
 })
 </script>
 

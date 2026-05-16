@@ -205,7 +205,7 @@ class ETLPipelineCreateSerializer(BaseETLSerializer):
     class Meta:
         model = ETLPipeline
         fields = [
-            'name', 'description', 'pipeline_type', 'source', 'target',
+            'id', 'name', 'description', 'pipeline_type', 'source', 'target',
             'source_endpoint_type', 'source_config', 'target_endpoint_type',
             'target_config', 'transformations', 'transformation_order',
             'schedule_enabled', 'schedule_frequency', 'schedule_cron',
@@ -215,6 +215,7 @@ class ETLPipelineCreateSerializer(BaseETLSerializer):
             'notify_on_start', 'validation_rules', 'tags', 'category', 'priority',
             'owner', 'team', 'notes'
         ]
+        read_only_fields = ['id']
 
 
 class ETLPipelineUpdateSerializer(BaseETLSerializer):

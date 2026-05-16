@@ -104,7 +104,7 @@ async function fetchConnections() {
     const rows = Array.isArray(data?.results) ? data.results : Array.isArray(data) ? data : []
     connections.value = rows.map((c: any): DBConnection => ({
       id:              c.id,
-      name:            c.name || '',
+      name:            c.data_source_name || c.name || c.host || '',
       connection_type: c.connection_type || c.db_type || 'postgresql',
       host:            c.host || '',
       port:            c.port ?? null,
@@ -370,8 +370,8 @@ onMounted(fetchConnections)
           <form class="drawer-form" @submit.prevent="submitForm">
 
             <div class="form-field">
-              <label class="form-label">Nom <span class="req">*</span></label>
-              <input v-model="form.name" class="form-input" type="text" placeholder="Ex : Production PostgreSQL" required />
+              <label class="form-label" for="conn-name">Nom <span class="req">*</span></label>
+              <input id="conn-name" v-model="form.name" class="form-input" type="text" placeholder="Ex : Production PostgreSQL" required />
             </div>
 
             <div class="form-field">
@@ -386,8 +386,8 @@ onMounted(fetchConnections)
 
             <div class="form-row-2">
               <div class="form-field">
-                <label class="form-label">Hôte <span class="req">*</span></label>
-                <input v-model="form.host" class="form-input" type="text" placeholder="localhost ou IP" required />
+                <label class="form-label" for="conn-host">Hôte <span class="req">*</span></label>
+                <input id="conn-host" v-model="form.host" class="form-input" type="text" placeholder="localhost ou IP" required />
               </div>
               <div class="form-field">
                 <label class="form-label">Port</label>
@@ -397,7 +397,7 @@ onMounted(fetchConnections)
 
             <div class="form-field">
               <label class="form-label">Nom de la base <span class="req">*</span></label>
-              <input v-model="form.database_name" class="form-input" type="text" placeholder="nom_de_la_base" required />
+              <input id="conn-db" v-model="form.database_name" class="form-input" type="text" placeholder="nom_de_la_base" required />
             </div>
 
             <div class="form-row-2">

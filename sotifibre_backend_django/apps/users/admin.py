@@ -184,7 +184,7 @@ class UserAdmin(BaseUserAdmin, ImportExportModelAdmin):
                 '<span class="badge bg-success">✓ {} req/h</span>',
                 obj.api_rate_limit
             )
-        return mark_safe('<span class="badge bg-secondary">✗</span>')
+        return format_html('<span class="badge bg-secondary">✗</span>')
     api_status.short_description = 'API'
     
     def last_activity(self, obj):

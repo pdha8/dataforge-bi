@@ -3,12 +3,12 @@ import { ref, computed, onMounted } from 'vue'
 import {
   Plus, Search, RefreshCcw, FileText, Download, Pencil, Trash2,
   Play, X, ChevronDown, Clock, Calendar, Grid3x3, List,
-  CheckCircle2, AlertTriangle, BarChart2,
+  CheckCircle2, AlertTriangle, BarChart2, Check, Users, Star,
 } from 'lucide-vue-next'
 import api from '@/api/axios'
 
 // ── Types ──────────────────────────────────────────────────
-type ReportFormat = 'pdf' | 'excel' | 'html' | 'csv' | 'json'
+type ReportFormat = 'pdf' | 'xlsx' | 'html' | 'csv' | 'json' | 'tsv' | 'yaml'
 type ViewMode = 'grid' | 'list'
 
 interface Report {
@@ -34,6 +34,21 @@ interface Report {
   tags: any
   created_at: string
   updated_at: string
+  starred?: boolean
+}
+
+async function toggleStarReport(r: Report) {
+  const was = !!r.starred
+  r.starred = !was
+  try {
+    if (!was) {
+      await api.post('/api/visualizations/favorites/add/',    { item_id: r.id, item_type: 'report' })
+    } else {
+      await api.post('/api/visualizations/favorites/remove/', { item_id: r.id, item_type: 'report' })
+    }
+  } catch {
+    r.starred = was
+  }
 }
 
 interface ReportStats {
@@ -62,8 +77,18 @@ const submitting    = ref(false)
 const deleteTarget  = ref<string | null>(null)
 const deleting      = ref(false)
 
-const generatingIds = ref<Set<string>>(new Set())
+const generatingIds    = ref<Set<string>>(new Set())
 const generateFeedback = ref<string | null>(null)
+
+// ── Lookups (dashboard select + recipients tags) ────────────
+interface DashboardOption { id: string; name: string }
+interface UserOption      { id: string; email: string; display: string }
+
+const dashboards           = ref<DashboardOption[]>([])
+const users                = ref<UserOption[]>([])
+const selectedRecipients   = ref<string[]>([])
+const recipientSearch      = ref('')
+const recipientDropdownOpen = ref(false)
 
 const form = ref({
   name: '',
@@ -71,7 +96,6 @@ const form = ref({
   dashboard: '',
   format: 'pdf' as ReportFormat,
   schedule: '',
-  recipients: '',
   page_size: 'A4',
   orientation: 'portrait',
   include_metadata: false,
@@ -96,6 +120,13 @@ const filtered = computed(() => {
 const showPageOptions = computed(() =>
   form.value.format === 'pdf' || form.value.format === 'html'
 )
+
+const filteredUsers = computed(() => {
+  const q = recipientSearch.value.toLowerCase()
+  return users.value.filter(u =>
+    !q || u.email.toLowerCase().includes(q) || u.display.toLowerCase().includes(q)
+  )
+})
 
 // ── Helpers ────────────────────────────────────────────────
 function timeAgo(dateStr: string | null): string {
@@ -132,15 +163,47 @@ function scheduleLabel(schedule: string): string {
 
 interface FormatMeta { label: string; color: string; bg: string }
 const FORMAT_META: Record<ReportFormat, FormatMeta> = {
-  pdf:   { label: 'PDF',   color: '#e05252', bg: 'oklch(18% 0.06 15)'   },
-  excel: { label: 'Excel', color: '#4db37a', bg: 'oklch(16% 0.06 148)'  },
-  html:  { label: 'HTML',  color: '#4a8fd4', bg: 'oklch(16% 0.05 240)'  },
-  csv:   { label: 'CSV',   color: '#d4922a', bg: 'oklch(16% 0.07 62)'   },
-  json:  { label: 'JSON',  color: '#9b72d4', bg: 'oklch(16% 0.07 295)'  },
+  pdf:  { label: 'PDF',   color: '#e05252', bg: 'oklch(18% 0.06 15)'   },
+  xlsx: { label: 'Excel', color: '#4db37a', bg: 'oklch(16% 0.06 148)'  },
+  html: { label: 'HTML',  color: '#4a8fd4', bg: 'oklch(16% 0.05 240)'  },
+  csv:  { label: 'CSV',   color: '#d4922a', bg: 'oklch(16% 0.07 62)'   },
+  json: { label: 'JSON',  color: '#9b72d4', bg: 'oklch(16% 0.07 295)'  },
+  tsv:  { label: 'TSV',   color: '#6ba3a0', bg: 'oklch(16% 0.05 190)'  },
+  yaml: { label: 'YAML',  color: '#c47fbd', bg: 'oklch(16% 0.06 320)'  },
 }
 
 function formatMeta(format: ReportFormat): FormatMeta {
   return FORMAT_META[format] ?? { label: format.toUpperCase(), color: 'var(--text-muted)', bg: 'var(--surface-overlay)' }
+}
+
+// ── Lookup helpers ─────────────────────────────────────────
+async function fetchDashboards() {
+  try {
+    const { data } = await api.get('/api/visualizations/dashboards/?page_size=200&ordering=name')
+    const rows = Array.isArray(data?.results) ? data.results : Array.isArray(data) ? data : []
+    dashboards.value = rows.map((d: any) => ({ id: String(d.id), name: d.name ?? d.slug ?? d.id }))
+  } catch { dashboards.value = [] }
+}
+
+async function fetchUsers() {
+  try {
+    const { data } = await api.get('/api/users/users/?page_size=200&ordering=email')
+    const rows = Array.isArray(data?.results) ? data.results : Array.isArray(data) ? data : []
+    users.value = rows.map((u: any) => ({
+      id:      String(u.id),
+      email:   u.email,
+      display: [u.first_name, u.last_name].filter(Boolean).join(' ') || u.email,
+    }))
+  } catch { users.value = [] }
+}
+
+function toggleRecipient(email: string) {
+  if (selectedRecipients.value.includes(email)) {
+    selectedRecipients.value = selectedRecipients.value.filter(e => e !== email)
+  } else {
+    selectedRecipients.value = [...selectedRecipients.value, email]
+    recipientSearch.value = ''
+  }
 }
 
 // ── API ────────────────────────────────────────────────────
@@ -192,15 +255,50 @@ async function generateReport(id: string) {
   generatingIds.value = new Set([...generatingIds.value, id])
   generateFeedback.value = null
   try {
-    await api.post(`/api/visualizations/reports/${id}/generate/`)
-    generateFeedback.value = 'Rapport généré'
-    // refresh this report's data
+    const response = await api.post(
+      `/api/visualizations/reports/${id}/generate/`,
+      {},
+      { responseType: 'blob' },
+    )
+
+    // Extraire le nom de fichier depuis Content-Disposition
+    const disposition: string = response.headers['content-disposition'] ?? ''
+    const match = disposition.match(/filename[^;=\n]*=["']?([^"';\n]+)["']?/)
+    const report = reports.value.find(r => r.id === id)
+    const fallbackName = `rapport_${report?.name ?? id}.${report?.format ?? 'bin'}`
+    const filename = match?.[1]?.trim() || fallbackName
+
+    // Déclencher le téléchargement dans le navigateur
+    const blobUrl = URL.createObjectURL(response.data as Blob)
+    const anchor = document.createElement('a')
+    anchor.href = blobUrl
+    anchor.download = filename
+    document.body.appendChild(anchor)
+    anchor.click()
+    document.body.removeChild(anchor)
+    URL.revokeObjectURL(blobUrl)
+
+    generateFeedback.value = `Fichier téléchargé : ${filename}`
+
+    // Rafraîchir les métadonnées du rapport (last_generated, generation_count…)
     const { data } = await api.get(`/api/visualizations/reports/${id}/`)
     const idx = reports.value.findIndex(r => r.id === id)
     if (idx !== -1) reports.value[idx] = data
-    setTimeout(() => { generateFeedback.value = null }, 3000)
-  } catch {
-    // silent fail
+
+    setTimeout(() => { generateFeedback.value = null }, 4000)
+  } catch (err: any) {
+    // Lire le message d'erreur depuis le blob si l'API retourne 500
+    let msg = 'Erreur de génération'
+    try {
+      const errBlob: Blob = err?.response?.data
+      if (errBlob instanceof Blob) {
+        const text = await errBlob.text()
+        const parsed = JSON.parse(text)
+        msg = parsed?.error ?? parsed?.message ?? msg
+      }
+    } catch { /* ignore */ }
+    generateFeedback.value = msg
+    setTimeout(() => { generateFeedback.value = null }, 5000)
   } finally {
     const next = new Set(generatingIds.value)
     next.delete(id)
@@ -236,20 +334,21 @@ async function confirmDelete() {
 }
 
 function openDrawer(report?: Report) {
+  recipientSearch.value = ''
+  recipientDropdownOpen.value = false
   if (report) {
     editReport.value = report
-    const recipientsRaw = Array.isArray(report.recipients)
-      ? report.recipients.join('\n')
+    selectedRecipients.value = Array.isArray(report.recipients)
+      ? report.recipients
       : typeof report.recipients === 'string'
-        ? report.recipients
-        : ''
+        ? report.recipients.split('\n').filter(Boolean)
+        : []
     form.value = {
       name:             report.name,
       description:      report.description ?? '',
       dashboard:        report.dashboard ?? '',
       format:           report.format as ReportFormat,
       schedule:         report.schedule ?? '',
-      recipients:       recipientsRaw,
       page_size:        report.page_size ?? 'A4',
       orientation:      report.orientation ?? 'portrait',
       include_metadata: report.include_metadata,
@@ -258,9 +357,10 @@ function openDrawer(report?: Report) {
     }
   } else {
     editReport.value = null
+    selectedRecipients.value = []
     form.value = {
       name: '', description: '', dashboard: '', format: 'pdf',
-      schedule: '', recipients: '', page_size: 'A4', orientation: 'portrait',
+      schedule: '', page_size: 'A4', orientation: 'portrait',
       include_metadata: false, include_filters: false, is_active: true,
     }
   }
@@ -273,10 +373,10 @@ async function submitForm() {
   const payload = {
     name:             form.value.name.trim(),
     description:      form.value.description.trim(),
-    dashboard:        form.value.dashboard.trim() || undefined,
+    dashboard:        form.value.dashboard || undefined,
     format:           form.value.format,
     schedule:         form.value.schedule.trim(),
-    recipients:       form.value.recipients.split('\n').filter(Boolean),
+    recipients:       selectedRecipients.value,
     page_size:        showPageOptions.value ? form.value.page_size : undefined,
     orientation:      showPageOptions.value ? form.value.orientation : undefined,
     include_metadata: form.value.include_metadata,
@@ -305,6 +405,8 @@ async function submitForm() {
 onMounted(() => {
   fetchReports()
   fetchStats()
+  fetchDashboards()
+  fetchUsers()
 })
 </script>
 
@@ -313,8 +415,14 @@ onMounted(() => {
 
     <!-- ── Generate feedback toast ───────────────────────── -->
     <Transition name="toast-anim">
-      <div v-if="generateFeedback" class="toast-success" role="status">
-        <CheckCircle2 :size="14" />
+      <div
+        v-if="generateFeedback"
+        class="toast-success"
+        :class="{ 'toast-success--error': generateFeedback.startsWith('Erreur') || generateFeedback.startsWith('La génération') }"
+        role="status"
+      >
+        <CheckCircle2 v-if="!generateFeedback.startsWith('Erreur') && !generateFeedback.startsWith('La génération')" :size="14" />
+        <AlertTriangle v-else :size="14" />
         {{ generateFeedback }}
       </div>
     </Transition>
@@ -403,9 +511,11 @@ onMounted(() => {
         <select v-model="filterFormat" class="filter-select">
           <option value="all">Tous les formats</option>
           <option value="pdf">PDF</option>
-          <option value="excel">Excel</option>
-          <option value="html">HTML</option>
+          <option value="xlsx">Excel (XLSX)</option>
           <option value="csv">CSV</option>
+          <option value="tsv">TSV</option>
+          <option value="yaml">YAML</option>
+          <option value="html">HTML</option>
           <option value="json">JSON</option>
         </select>
         <ChevronDown :size="13" class="select-arrow" />
@@ -544,6 +654,15 @@ onMounted(() => {
           </button>
 
           <div class="card-actions">
+            <!-- Favori (étoile) -->
+            <button
+              class="action-btn action-btn--star"
+              :class="{ 'action-btn--star-on': report.starred }"
+              :title="report.starred ? 'Retirer des favoris' : 'Ajouter aux favoris'"
+              @click="toggleStarReport(report)"
+            >
+              <Star :size="13" :fill="report.starred ? 'currentColor' : 'none'" />
+            </button>
             <!-- Generate -->
             <button
               class="action-btn action-btn--generate"
@@ -731,14 +850,17 @@ onMounted(() => {
 
             <!-- dashboard -->
             <div class="form-field">
-              <label class="form-label" for="f-dash">ID Tableau de bord <span class="opt">optionnel</span></label>
-              <input
-                id="f-dash"
-                v-model="form.dashboard"
-                class="form-input"
-                type="text"
-                placeholder="UUID du tableau de bord"
-              />
+              <label class="form-label" for="f-dash">Tableau de bord <span class="opt">optionnel</span></label>
+              <div class="select-wrap select-wrap--full">
+                <select id="f-dash" v-model="form.dashboard" class="filter-select filter-select--full">
+                  <option value="">— Aucun tableau de bord —</option>
+                  <option v-for="dash in dashboards" :key="dash.id" :value="dash.id">
+                    {{ dash.name }}
+                  </option>
+                </select>
+                <ChevronDown :size="13" class="select-arrow" />
+              </div>
+              <p v-if="dashboards.length === 0" class="form-hint">Aucun tableau de bord disponible</p>
             </div>
 
             <!-- format -->
@@ -746,10 +868,12 @@ onMounted(() => {
               <label class="form-label" for="f-fmt">Format</label>
               <div class="select-wrap select-wrap--full">
                 <select id="f-fmt" v-model="form.format" class="filter-select filter-select--full">
-                  <option value="pdf">PDF</option>
-                  <option value="excel">Excel</option>
-                  <option value="html">HTML</option>
+                  <option value="pdf">PDF (nécessite configuration)</option>
+                  <option value="xlsx">Excel (XLSX)</option>
                   <option value="csv">CSV</option>
+                  <option value="tsv">TSV</option>
+                  <option value="yaml">YAML</option>
+                  <option value="html">HTML</option>
                   <option value="json">JSON</option>
                 </select>
                 <ChevronDown :size="13" class="select-arrow" />
@@ -816,22 +940,69 @@ onMounted(() => {
               />
             </div>
 
-            <!-- recipients -->
+            <!-- recipients — tags selector -->
             <div class="form-field">
               <div class="recip-label-row">
-                <label class="form-label" for="f-recip">Destinataires</label>
+                <label class="form-label">
+                  <Users :size="13" style="vertical-align:middle;margin-right:4px" />
+                  Destinataires
+                </label>
                 <span class="recip-count">
-                  {{ form.recipients.split('\n').filter(l => l.trim()).length }} adresse{{ form.recipients.split('\n').filter(l => l.trim()).length !== 1 ? 's' : '' }}
+                  {{ selectedRecipients.length }} sélectionné{{ selectedRecipients.length !== 1 ? 's' : '' }}
                 </span>
               </div>
-              <textarea
-                id="f-recip"
-                v-model="form.recipients"
-                class="form-textarea form-textarea--mono"
-                placeholder="utilisateur@exemple.com&#10;autre@exemple.com&#10;equipe@societe.com"
-                rows="4"
-              />
-              <p class="form-hint">Une adresse e-mail par ligne. Les lignes vides sont ignorées.</p>
+
+              <div class="tags-selector" @click.stop>
+                <!-- chips des destinataires sélectionnés -->
+                <div class="tags-chips">
+                  <span
+                    v-for="email in selectedRecipients"
+                    :key="email"
+                    class="tag-chip"
+                  >
+                    {{ email }}
+                    <button
+                      type="button"
+                      class="tag-chip-remove"
+                      :aria-label="`Retirer ${email}`"
+                      @click="toggleRecipient(email)"
+                    >
+                      <X :size="10" />
+                    </button>
+                  </span>
+
+                  <input
+                    id="f-recip"
+                    v-model="recipientSearch"
+                    class="tag-input"
+                    type="text"
+                    :placeholder="selectedRecipients.length ? 'Ajouter…' : 'Rechercher un utilisateur…'"
+                    autocomplete="off"
+                    @focus="recipientDropdownOpen = true"
+                    @blur="setTimeout(() => { recipientDropdownOpen = false }, 200)"
+                  />
+                </div>
+
+                <!-- dropdown liste utilisateurs -->
+                <div v-if="recipientDropdownOpen && users.length > 0" class="tags-dropdown">
+                  <div
+                    v-for="user in filteredUsers"
+                    :key="user.email"
+                    class="tags-option"
+                    :class="{ 'tags-option--active': selectedRecipients.includes(user.email) }"
+                    @mousedown.prevent="toggleRecipient(user.email)"
+                  >
+                    <div class="option-info">
+                      <span class="option-display">{{ user.display }}</span>
+                      <span class="option-email">{{ user.email }}</span>
+                    </div>
+                    <Check v-if="selectedRecipients.includes(user.email)" :size="13" class="option-check" />
+                  </div>
+                  <div v-if="filteredUsers.length === 0" class="tags-empty">
+                    Aucun utilisateur trouvé
+                  </div>
+                </div>
+              </div>
             </div>
 
             <!-- checkboxes row -->
@@ -909,6 +1080,12 @@ onMounted(() => {
   font-size: var(--text-sm);
   font-weight: 600;
   box-shadow: 0 8px 32px oklch(5% 0.01 258 / 0.5);
+  max-width: 420px;
+}
+.toast-success--error {
+  background: oklch(16% 0.06 15);
+  border-color: oklch(40% 0.14 15);
+  color: #e05252;
 }
 
 .toast-anim-enter-active,
@@ -1969,5 +2146,111 @@ onMounted(() => {
 @media (prefers-reduced-motion: reduce) {
   .rp-card, .list-row { animation: none; opacity: 1; transform: none; }
   .card-skel { animation: none; }
+}
+
+/* ── Tags selector (Destinataires) ───────────────────────── */
+.tags-selector {
+  position: relative;
+}
+.tags-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1) var(--sp-2);
+  align-items: center;
+  min-height: 38px;
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--surface-overlay);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: text;
+  transition: border-color 0.15s;
+}
+.tags-chips:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px oklch(52% 0.22 258 / 0.18);
+}
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  background: oklch(20% 0.06 258);
+  border: 1px solid oklch(38% 0.1 258);
+  border-radius: 99px;
+  font-size: var(--text-xs);
+  color: oklch(75% 0.12 258);
+  white-space: nowrap;
+}
+.tag-chip-remove {
+  display: flex;
+  align-items: center;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: oklch(55% 0.1 258);
+  line-height: 1;
+  transition: color 0.15s;
+}
+.tag-chip-remove:hover { color: #e05252; }
+.tag-input {
+  flex: 1;
+  min-width: 140px;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  padding: 2px 0;
+}
+.tag-input::placeholder { color: var(--text-muted); }
+
+.tags-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 200;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 8px 24px oklch(5% 0.01 258 / 0.4);
+  max-height: 220px;
+  overflow-y: auto;
+}
+.tags-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.tags-option:hover       { background: var(--surface-overlay); }
+.tags-option--active     { background: oklch(18% 0.06 258); }
+.option-info { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.option-display {
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.option-email {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.option-check { color: var(--accent); flex-shrink: 0; }
+.tags-empty {
+  padding: var(--sp-3);
+  text-align: center;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
 }
 </style>

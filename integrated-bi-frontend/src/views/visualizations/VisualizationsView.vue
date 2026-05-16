@@ -9,12 +9,15 @@ import {
 } from 'chart.js'
 import { Line, Bar, Doughnut, Scatter } from 'vue-chartjs'
 import api from '@/api/axios'
+import { useAuthStore } from '@/stores/auth'
 import {
   Plus, Search, RefreshCcw, BarChart2, LineChart,
   PieChart, ScatterChart, Table2, AreaChart,
   Pencil, Copy, Trash2, X, ChevronDown, Eye,
-  TrendingUp, Grid3x3, List,
+  TrendingUp, Grid3x3, List, Star,
 } from 'lucide-vue-next'
+
+const auth = useAuthStore()
 
 ChartJS.register(
   CategoryScale, LinearScale,
@@ -40,6 +43,28 @@ interface Visualization {
   description?: string
   updated_at: string
   preview: VizPreview
+  starred?: boolean
+  dashboard_id?: string | number | null
+}
+
+/**
+ * Toggle Favori d'une visualisation. Le backend stocke les favoris pour
+ * dashboard/kpi/report → on ajoute la viz comme favori du DASHBOARD parent.
+ * Si la viz est orpheline (pas de dashboard), on garde l'état localement.
+ */
+async function toggleStarViz(v: Visualization) {
+  const was = !!v.starred
+  v.starred = !was
+  if (!v.dashboard_id) return  // viz libre → toggle local seulement
+  try {
+    if (!was) {
+      await api.post('/api/visualizations/favorites/add/',    { item_id: v.dashboard_id, item_type: 'dashboard' })
+    } else {
+      await api.post('/api/visualizations/favorites/remove/', { item_id: v.dashboard_id, item_type: 'dashboard' })
+    }
+  } catch {
+    v.starred = was
+  }
 }
 
 // ── Chart preview palette ──────────────────────────────────
@@ -136,7 +161,22 @@ const form = ref({
   type: 'line' as ChartType,
   source: '',
   description: '',
+  dashboard: '' as string,
 })
+
+// ── Dashboards lookup (pour le <select> dynamique) ─────────
+interface DashboardOption { id: string | number; name: string }
+const dashboardOptions = ref<DashboardOption[]>([])
+
+async function fetchDashboardOptions() {
+  try {
+    const { data } = await api.get('/api/visualizations/dashboards/')
+    const rows = Array.isArray(data?.results) ? data.results : Array.isArray(data) ? data : []
+    dashboardOptions.value = rows.map((d: any) => ({ id: d.id, name: d.name || d.title || `Dashboard ${d.id}` }))
+  } catch {
+    dashboardOptions.value = []
+  }
+}
 
 // ── Computed ───────────────────────────────────────────────
 const filtered = computed(() => {
@@ -189,12 +229,14 @@ function mapWidget(w: any): Visualization {
   const color = PREVIEW_COLORS[_previewIdx++ % PREVIEW_COLORS.length]
   const chartType = WIDGET_TYPE_MAP[w.widget_type] ?? 'line'
   return {
-    id:          w.id,
-    name:        w.name,
-    type:        chartType,
-    source:      w.dimensional_schema_name || w.dashboard_name || '',
-    description: w.description,
-    updated_at:  w.updated_at,
+    id:           w.id,
+    name:         w.name,
+    type:         chartType,
+    source:       w.dimensional_schema_name || w.dashboard_name || '',
+    description:  w.description,
+    updated_at:   w.updated_at,
+    starred:      false,
+    dashboard_id: w.dashboard || null,
     preview: {
       color,
       data: chartType === 'table'
@@ -248,14 +290,16 @@ function duplicateViz(v: Visualization) {
 
 function openDrawer() {
   editViz.value = null
-  form.value = { name: '', type: 'line', source: '', description: '' }
+  form.value = { name: '', type: 'line', source: '', description: '', dashboard: '' }
   drawerOpen.value = true
+  if (dashboardOptions.value.length === 0) fetchDashboardOptions()
 }
 
 function openEdit(viz: Visualization) {
   editViz.value = viz
-  form.value = { name: viz.name, type: viz.type, source: viz.source, description: viz.description || '' }
+  form.value = { name: viz.name, type: viz.type, source: viz.source, description: viz.description || '', dashboard: '' }
   drawerOpen.value = true
+  if (dashboardOptions.value.length === 0) fetchDashboardOptions()
 }
 
 function openPreview(viz: Visualization) {
@@ -276,7 +320,7 @@ async function submitForm() {
         name:        form.value.name,
         widget_type: 'chart',
         description: form.value.description,
-        dashboard:   null,
+        dashboard:   form.value.dashboard || null,
       })
     }
     await fetchViz()
@@ -312,7 +356,11 @@ onMounted(fetchViz)
         >
           <RefreshCcw :size="14" />
         </button>
-        <button class="btn-primary" @click="openDrawer">
+        <button
+          v-if="auth.canManageVisualizations"
+          class="btn-primary"
+          @click="openDrawer"
+        >
           <Plus :size="15" />
           <span>Nouvelle visualisation</span>
         </button>
@@ -481,6 +529,14 @@ onMounted(fetchViz)
 
           <div class="card-actions">
             <button
+              class="card-btn card-btn--star"
+              :class="{ 'card-btn--star-on': viz.starred }"
+              :title="viz.starred ? 'Retirer des favoris' : 'Ajouter aux favoris'"
+              @click="toggleStarViz(viz)"
+            >
+              <Star :size="13" :fill="viz.starred ? 'currentColor' : 'none'" />
+            </button>
+            <button
               class="card-btn"
               title="Modifier"
               @click="openEdit(viz)"
@@ -638,18 +694,24 @@ onMounted(fetchViz)
               />
             </div>
 
-            <!-- Source -->
+            <!-- Tableau de bord (destination) — <select> dynamique branché sur /api/visualizations/dashboards/ -->
             <div class="form-field">
-              <label class="form-label" for="f-src">
-                Source de données <span class="opt">optionnel</span>
+              <label class="form-label" for="f-dash">
+                Tableau de bord <span class="opt">optionnel</span>
               </label>
-              <input
-                id="f-src"
-                v-model="form.source"
+              <select
+                id="f-dash"
+                v-model="form.dashboard"
                 class="form-input"
-                type="text"
-                placeholder="Ex : DW_VENTES.fact_ventes"
-              />
+                name="dashboard"
+              >
+                <option value="">— Aucun (widget libre) —</option>
+                <option
+                  v-for="opt in dashboardOptions"
+                  :key="opt.id"
+                  :value="opt.id"
+                >{{ opt.name }}</option>
+              </select>
             </div>
 
             <!-- Description -->

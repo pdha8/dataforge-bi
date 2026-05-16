@@ -88,7 +88,7 @@ urlpatterns = [
     # Notifications App - Alertes et communications BI ← NOUVEAU
     path('api/notifications/', include('apps.notifications.urls')),
 
-    # ML Analytics App - Analyse et modeles ML
+    # ML Analytics App - Analytique prédictive, prévisions, anomalies
     path('api/ml-analytics/', include('apps.ml_analytics.urls')),
 ]
 

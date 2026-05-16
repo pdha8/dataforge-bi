@@ -138,6 +138,8 @@ const lineData = {
 const lineOptions = {
   responsive: true,
   maintainAspectRatio: false,
+  animation: false as const,
+  resizeDelay: 150,
   interaction: { mode: 'index' as const, intersect: false },
   plugins: {
     legend: {
@@ -189,6 +191,8 @@ const barData = {
 const barOptions = {
   responsive: true,
   maintainAspectRatio: false,
+  animation: false as const,
+  resizeDelay: 150,
   plugins: {
     legend: { display: false },
     tooltip: tooltipDefaults,
@@ -222,6 +226,8 @@ const donutData = {
 const donutOptions = {
   responsive: true,
   maintainAspectRatio: false,
+  animation: false as const,
+  resizeDelay: 150,
   cutout: '65%',
   plugins: {
     legend: {

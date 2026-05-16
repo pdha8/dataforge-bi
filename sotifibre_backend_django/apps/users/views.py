@@ -237,6 +237,25 @@ class UserViewSet(viewsets.ModelViewSet):
         
         return success_response(data, "Profil utilisateur BI récupéré")
     
+    @action(detail=False, methods=['get', 'patch'])
+    def profile(self, request):
+        """
+        GET  /api/users/users/profile/ — profil de l'utilisateur connecté
+        PATCH /api/users/users/profile/ — mise à jour du profil
+        """
+        user = request.user
+        if request.method == 'PATCH':
+            serializer = UserUpdateSerializer(
+                user, data=request.data, partial=True, context={'request': request}
+            )
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return success_response(
+                UserDetailSerializer(user).data,
+                "Profil mis à jour avec succès"
+            )
+        return success_response(UserDetailSerializer(user).data, "Profil récupéré")
+
     @action(detail=False, methods=['post'])
     def change_password(self, request):
         """

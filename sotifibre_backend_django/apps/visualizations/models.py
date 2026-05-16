@@ -156,7 +156,7 @@ class Dashboard(BaseModel):
         'Format d\'export par défaut',
         max_length=20,
         choices=EXPORT_FORMATS,
-        default='pdf'
+        default='html'
     )
     
     # Versioning
@@ -598,7 +598,9 @@ class Report(BaseModel):
     # Source
     dashboard = models.ForeignKey(
         Dashboard,
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name='reports',
         verbose_name='Tableau de bord source'
     )
@@ -608,7 +610,7 @@ class Report(BaseModel):
         'Format',
         max_length=20,
         choices=EXPORT_FORMATS,
-        default='pdf'
+        default='html'
     )
     schedule = models.CharField(
         'Planification CRON',

@@ -181,7 +181,6 @@ class NotificationChannel(BaseModel):
     address = models.CharField(
         'Adresse',
         max_length=500,
-        validators=[validate_email, validate_phone_number, validate_webhook_url]
     )
     is_enabled = models.BooleanField('Activé', default=True)
     is_verified = models.BooleanField('Vérifié', default=False)
@@ -205,7 +204,16 @@ class NotificationChannel(BaseModel):
     
     def __str__(self):
         return f"{self.user.email} - {self.get_channel_display()}"
-    
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        if self.channel == 'email':
+            validate_email(self.address)
+        elif self.channel in ('sms', 'whatsapp'):
+            validate_phone_number(self.address)
+        elif self.channel in ('webhook', 'slack', 'teams', 'telegram'):
+            validate_webhook_url(self.address)
+
     def verify(self, token):
         """Vérifie le canal"""
         if self.verification_token == token:

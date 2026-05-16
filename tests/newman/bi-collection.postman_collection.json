@@ -1,0 +1,358 @@
+{
+  "info": {
+    "name": "Sotifibre BI – API Tests",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_description": "Tests automatisés des routes principales de l'API BI. Utiliser avec Newman + fichier d'environnement."
+  },
+  "variable": [],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "POST /api/auth/jwt/token/ – Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Retourne access + refresh tokens', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.have.property('access');",
+                  "  pm.expect(json).to.have.property('refresh');",
+                  "  pm.expect(json.access).to.be.a('string').and.not.empty;",
+                  "});",
+                  "// Stocker les tokens dans l'environnement pour les requêtes suivantes",
+                  "const body = pm.response.json();",
+                  "pm.environment.set('access_token', body.access);",
+                  "pm.environment.set('refresh_token', body.refresh);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"{{TEST_USER_EMAIL}}\", \"password\": \"{{TEST_USER_PASSWORD}}\"}"
+            },
+            "url": { "raw": "{{BASE_URL}}/api/auth/jwt/token/", "host": ["{{BASE_URL}}"], "path": ["api","auth","jwt","token",""] }
+          }
+        },
+        {
+          "name": "POST /api/auth/jwt/refresh/ – Refresh token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Retourne un nouveau access token', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.have.property('access');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"refresh\": \"{{refresh_token}}\"}"
+            },
+            "url": { "raw": "{{BASE_URL}}/api/auth/jwt/refresh/", "host": ["{{BASE_URL}}"], "path": ["api","auth","jwt","refresh",""] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "GET /api/users/users/ – Liste des utilisateurs",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse est un tableau ou paginé', () => {",
+                  "  const json = pm.response.json();",
+                  "  const list = Array.isArray(json) ? json : json.results;",
+                  "  pm.expect(list).to.be.an('array');",
+                  "});",
+                  "pm.test('Chaque user a les champs attendus', () => {",
+                  "  const json = pm.response.json();",
+                  "  const list = Array.isArray(json) ? json : (json.results ?? []);",
+                  "  if (list.length > 0) {",
+                  "    const u = list[0];",
+                  "    pm.expect(u).to.have.property('id');",
+                  "    pm.expect(u).to.have.property('email');",
+                  "  }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{BASE_URL}}/api/users/users/", "host": ["{{BASE_URL}}"], "path": ["api","users","users",""] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Data Sources",
+      "item": [
+        {
+          "name": "GET /api/data-sources/sources/ – Liste des sources",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse est une liste', () => {",
+                  "  const json = pm.response.json();",
+                  "  const list = Array.isArray(json) ? json : json.results;",
+                  "  pm.expect(list).to.be.an('array');",
+                  "});",
+                  "pm.test('Chaque source a id, name, source_type', () => {",
+                  "  const json = pm.response.json();",
+                  "  const list = Array.isArray(json) ? json : (json.results ?? []);",
+                  "  if (list.length > 0) {",
+                  "    pm.expect(list[0]).to.have.property('id');",
+                  "    pm.expect(list[0]).to.have.property('name');",
+                  "    pm.expect(list[0]).to.have.property('source_type');",
+                  "  }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{BASE_URL}}/api/data-sources/sources/", "host": ["{{BASE_URL}}"], "path": ["api","data-sources","sources",""] }
+          }
+        },
+        {
+          "name": "GET /api/data-sources/connections/ – Connexions",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse est une liste', () => {",
+                  "  const json = pm.response.json();",
+                  "  const list = Array.isArray(json) ? json : json.results;",
+                  "  pm.expect(list).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{BASE_URL}}/api/data-sources/connections/", "host": ["{{BASE_URL}}"], "path": ["api","data-sources","connections",""] }
+          }
+        },
+        {
+          "name": "GET /api/data-sources/files/ – Fichiers",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{BASE_URL}}/api/data-sources/files/", "host": ["{{BASE_URL}}"], "path": ["api","data-sources","files",""] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ETL Pipelines",
+      "item": [
+        {
+          "name": "GET /api/etl/pipelines/ – Liste des pipelines",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse est une liste', () => {",
+                  "  const json = pm.response.json();",
+                  "  const list = Array.isArray(json) ? json : json.results;",
+                  "  pm.expect(list).to.be.an('array');",
+                  "});",
+                  "pm.test('Chaque pipeline a id, name, status', () => {",
+                  "  const json = pm.response.json();",
+                  "  const list = Array.isArray(json) ? json : (json.results ?? []);",
+                  "  if (list.length > 0) {",
+                  "    pm.expect(list[0]).to.have.property('id');",
+                  "    pm.expect(list[0]).to.have.property('name');",
+                  "    pm.expect(list[0]).to.have.property('status');",
+                  "  }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{BASE_URL}}/api/etl/pipelines/", "host": ["{{BASE_URL}}"], "path": ["api","etl","pipelines",""] }
+          }
+        },
+        {
+          "name": "GET /api/etl/executions/ – Exécutions ETL",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Chaque exécution a status, started_at, rows_processed', () => {",
+                  "  const json = pm.response.json();",
+                  "  const list = Array.isArray(json) ? json : (json.results ?? []);",
+                  "  if (list.length > 0) {",
+                  "    pm.expect(list[0]).to.have.property('status');",
+                  "    pm.expect(list[0]).to.have.property('started_at');",
+                  "  }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{BASE_URL}}/api/etl/executions/", "host": ["{{BASE_URL}}"], "path": ["api","etl","executions",""] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Visualisations",
+      "item": [
+        {
+          "name": "GET /api/visualizations/dashboards/ – Dashboards",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse est une liste', () => {",
+                  "  const json = pm.response.json();",
+                  "  const list = Array.isArray(json) ? json : json.results;",
+                  "  pm.expect(list).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{BASE_URL}}/api/visualizations/dashboards/", "host": ["{{BASE_URL}}"], "path": ["api","visualizations","dashboards",""] }
+          }
+        },
+        {
+          "name": "GET /api/visualizations/kpis/ – KPIs",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Chaque KPI a id, name, value', () => {",
+                  "  const json = pm.response.json();",
+                  "  const list = Array.isArray(json) ? json : (json.results ?? []);",
+                  "  if (list.length > 0) {",
+                  "    pm.expect(list[0]).to.have.property('id');",
+                  "    pm.expect(list[0]).to.have.property('name');",
+                  "  }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{BASE_URL}}/api/visualizations/kpis/", "host": ["{{BASE_URL}}"], "path": ["api","visualizations","kpis",""] }
+          }
+        },
+        {
+          "name": "GET /api/visualizations/reports/ – Rapports",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{BASE_URL}}/api/visualizations/reports/", "host": ["{{BASE_URL}}"], "path": ["api","visualizations","reports",""] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "item": [
+        {
+          "name": "GET /api/notifications/alerts/ – Alertes",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{BASE_URL}}/api/notifications/alerts/", "host": ["{{BASE_URL}}"], "path": ["api","notifications","alerts",""] }
+          }
+        }
+      ]
+    }
+  ]
+}

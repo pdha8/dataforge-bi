@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import api from '@/api/axios'
+import { useAuthStore } from '@/stores/auth'
+
+const auth = useAuthStore()
 import {
   Plus, Search, RefreshCcw, Database, FileText,
   CheckCircle2, Clock,
@@ -670,7 +673,11 @@ onMounted(async () => {
           {{ stats.total }} source{{ stats.total !== 1 ? 's' : '' }} configurée{{ stats.total !== 1 ? 's' : '' }}
         </p>
       </div>
-      <button class="btn-primary" @click="openDrawer">
+      <button
+        v-if="auth.canManageDataSources"
+        class="btn-primary"
+        @click="openDrawer"
+      >
         <Plus :size="15" />
         <span>Nouvelle source</span>
       </button>

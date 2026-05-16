@@ -7,12 +7,15 @@ import {
 } from 'chart.js'
 import { Line } from 'vue-chartjs'
 import api from '@/api/axios'
+import { useAuthStore } from '@/stores/auth'
 import {
   Plus, Search, TrendingUp, TrendingDown, Minus,
   Target, AlertTriangle, CheckCircle2, XCircle,
   RefreshCcw, Pencil, Trash2, X, ChevronDown,
-  Layers, LayoutGrid, List, Calculator,
+  Layers, LayoutGrid, List, Calculator, Star,
 } from 'lucide-vue-next'
+
+const auth = useAuthStore()
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler)
 
@@ -37,6 +40,21 @@ interface KpiDef {
   warning_threshold?: number | null
   critical_threshold?: number | null
   format_string?: string | null
+  starred?: boolean
+}
+
+async function toggleStarKpi(k: KpiDef) {
+  const was = !!k.starred
+  k.starred = !was
+  try {
+    if (!was) {
+      await api.post('/api/visualizations/favorites/add/',    { item_id: k.id, item_type: 'kpi' })
+    } else {
+      await api.post('/api/visualizations/favorites/remove/', { item_id: k.id, item_type: 'kpi' })
+    }
+  } catch {
+    k.starred = was
+  }
 }
 
 // ── Domain metadata ────────────────────────────────────────
@@ -239,7 +257,7 @@ async function deleteKpi(id: string | number) {
 function openDrawer() {
   editKpi.value = null
   form.value = {
-    name: '', domain: 'ventes', value: '', target: '', unit: '', description: '',
+    name: '', domain: 'number', value: '', target: '', unit: '', description: '',
     warning_threshold: '', critical_threshold: '',
     formula: '', format_string: '', decimal_places: '2',
     track_trend: false, trend_period: 'monthly',
@@ -270,14 +288,15 @@ async function submitForm() {
   if (!form.value.name.trim() || !form.value.target) return
   submitting.value = true
   const t = parseFloat(form.value.target)
+  const VALID_KPI_TYPES = ['number', 'percentage', 'currency', 'ratio', 'trend', 'comparison']
   const payload: Record<string, any> = {
     name:              form.value.name,
-    kpi_type:          form.value.domain || 'number',
+    kpi_type:          VALID_KPI_TYPES.includes(form.value.domain) ? form.value.domain : 'number',
     target_value:      t,
     unit:              form.value.unit,
     description:       form.value.description,
-    formula:           form.value.formula || null,
-    format_string:     form.value.format_string || null,
+    formula:           form.value.formula || '',
+    format_string:     form.value.format_string || '',
     decimal_places:    form.value.decimal_places ? parseInt(form.value.decimal_places) : 2,
     track_trend:       form.value.track_trend,
     trend_period:      form.value.trend_period,
@@ -303,7 +322,7 @@ async function submitForm() {
 }
 
 function mapKpi(k: any): KpiDef {
-  const statusMap: Record<string, string> = { success: 'achieved', warning: 'at_risk', critical: 'critical' }
+  const statusMap: Record<string, string> = { success: 'achieved', warning: 'at_risk', critical: 'critical', unknown: 'on_track' }
   return {
     id:                 k.id,
     name:               k.name,
@@ -313,7 +332,7 @@ function mapKpi(k: any): KpiDef {
     unit:               k.unit || '',
     trend_dir:          k.trend_direction || 'stable',
     trend_pct:          k.trend_percentage ?? 0,
-    status:             statusMap[k.status] ?? k.status ?? 'on_track',
+    status:             statusMap[k.status] ?? (STATUS_META[k.status] ? k.status : 'on_track'),
     sparkline:          [],
     updated_at:         k.updated_at || k.last_calculated || new Date().toISOString(),
     description:        k.description,
@@ -403,7 +422,11 @@ onMounted(() => { fetchKpis(); fetchPickerData() })
         >
           <RefreshCcw :size="14" />
         </button>
-        <button class="btn-primary" @click="openDrawer">
+        <button
+          v-if="auth.canManageKPIs"
+          class="btn-primary"
+          @click="openDrawer"
+        >
           <Plus :size="15" />
           <span>Nouveau KPI</span>
         </button>
@@ -637,6 +660,14 @@ onMounted(() => { fetchKpis(); fetchPickerData() })
                 >
                   <span v-if="calculatingId === kpi.id" class="act-spinner"></span>
                   <Calculator v-else :size="12" />
+                </button>
+                <button
+                  class="act-btn act-btn--star"
+                  :class="{ 'act-btn--star-on': kpi.starred }"
+                  :title="kpi.starred ? 'Retirer des favoris' : 'Ajouter aux favoris'"
+                  @click="toggleStarKpi(kpi)"
+                >
+                  <Star :size="12" :fill="kpi.starred ? 'currentColor' : 'none'" />
                 </button>
                 <button class="act-btn" title="Modifier" @click="openEdit(kpi)"><Pencil :size="12" /></button>
                 <template v-if="deleteConfirm === kpi.id">

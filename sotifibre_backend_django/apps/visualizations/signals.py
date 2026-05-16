@@ -29,14 +29,20 @@ def dashboard_post_save(sender, instance, created, **kwargs):
     """Après sauvegarde d'un tableau de bord"""
     action = "créé" if created else "modifié"
     logger.info(f"📊 Dashboard '{instance.name}' {action}")
-    cache.delete_pattern(f"dashboard_{instance.id}_*")
+    try:
+        cache.delete_pattern(f"dashboard_{instance.id}_*")
+    except AttributeError:
+        cache.clear()
 
 
 @receiver(post_delete, sender=Dashboard)
 def dashboard_post_delete(sender, instance, **kwargs):
     """Après suppression d'un tableau de bord"""
     logger.info(f"🗑️ Dashboard '{instance.name}' supprimé")
-    cache.delete_pattern(f"dashboard_{instance.id}_*")
+    try:
+        cache.delete_pattern(f"dashboard_{instance.id}_*")
+    except AttributeError:
+        pass
 
 
 @receiver(post_save, sender=Widget)
@@ -44,7 +50,10 @@ def widget_post_save(sender, instance, created, **kwargs):
     """Après sauvegarde d'un widget"""
     action = "créé" if created else "modifié"
     logger.info(f"📊 Widget '{instance.name}' {action}")
-    cache.delete_pattern(f"widget_data_{instance.id}_*")
+    try:
+        cache.delete_pattern(f"widget_data_{instance.id}_*")
+    except AttributeError:
+        pass
 
 
 @receiver(post_save, sender=KPI)

@@ -73,12 +73,18 @@ class DataSourceViewSet(viewsets.ModelViewSet):
             permission_classes = [IsAuthenticated, CanViewDataSources]
         return [permission() for permission in permission_classes]
     
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return created_response(serializer.data, "Source de données créée avec succès")
+
     def perform_create(self, serializer):
         instance = serializer.save(owner=self.request.user)
         instance._request = self.request
         return instance
-    
-    @action(detail=True, methods=['post'])
+
+    @action(detail=True, methods=['post'], url_path='test-connection')
     def test_connection(self, request, pk=None):
         """Teste la connexion à la source de données"""
         source = self.get_object()
@@ -213,7 +219,12 @@ class DataSourceViewSet(viewsets.ModelViewSet):
         )
         
         total_queries = queryset.aggregate(Sum('total_queries'))['total_queries__sum'] or 0
-        avg_success_rate = queryset.aggregate(Avg('success_rate'))['success_rate__avg'] or 0
+        agg = queryset.aggregate(
+            total_q=Sum('total_queries'),
+            total_ok=Sum('successful_queries'),
+        )
+        t, ok = agg['total_q'] or 0, agg['total_ok'] or 0
+        avg_success_rate = round((ok / t) * 100, 1) if t else 0
         
         stats_data = {
             'total': total,
@@ -534,13 +545,18 @@ class DataSourceFileViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, CanManageDataSources]
     pagination_class = StandardPagination
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['original_name', 'notes']
+    search_fields = ['name', 'original_name', 'notes']
     ordering_fields = ['created_at', 'file_size']
     ordering = ['-created_at']
-    
+
     def perform_create(self, serializer):
-        """Crée un fichier avec l'utilisateur connecté"""
-        serializer.save(uploaded_by=self.request.user)
+        import os
+        file = serializer.validated_data.get('file')
+        original_name = file.name if file else ''
+        serializer.save(
+            uploaded_by=self.request.user,
+            original_name=original_name,
+        )
     
     @action(detail=True, methods=['post'])
     def process(self, request, pk=None):
@@ -550,17 +566,30 @@ class DataSourceFileViewSet(viewsets.ModelViewSet):
         # Logique de traitement
         try:
             import pandas as pd
-            from io import BytesIO
-            
-            # Lire le fichier
-            if file_obj.file.name.endswith('.csv'):
+
+            fname = (file_obj.file.name or '').lower()
+            if fname.endswith('.csv'):
                 df = pd.read_csv(file_obj.file, encoding=file_obj.encoding or 'utf-8')
-            elif file_obj.file.name.endswith(('.xlsx', '.xls')):
+            elif fname.endswith(('.xlsx', '.xls')):
                 df = pd.read_excel(file_obj.file, sheet_name=file_obj.sheet_name or 0)
-            elif file_obj.file.name.endswith('.json'):
+            elif fname.endswith('.json'):
                 df = pd.read_json(file_obj.file)
+            elif fname.endswith('.tsv'):
+                df = pd.read_csv(file_obj.file, sep='\t', encoding=file_obj.encoding or 'utf-8')
+            elif fname.endswith(('.yaml', '.yml')):
+                import yaml
+                raw = yaml.safe_load(file_obj.file.read())
+                if isinstance(raw, list):
+                    df = pd.DataFrame(raw)
+                elif isinstance(raw, dict):
+                    df = pd.DataFrame([raw])
+                else:
+                    return error_response("Format YAML invalide : liste ou dictionnaire attendu")
+            elif fname.endswith(('.html', '.htm')):
+                tables = pd.read_html(file_obj.file)
+                df = tables[0] if tables else pd.DataFrame()
             else:
-                return error_response(f"Format non supporté: {file_obj.file.name}")
+                return error_response(f"Format non supporté : {file_obj.file.name}")
             
             # Mettre à jour les informations
             file_obj.row_count = len(df)
@@ -588,15 +617,25 @@ class DataSourceFileViewSet(viewsets.ModelViewSet):
     def preview(self, request, pk=None):
         """Aperçu des données du fichier"""
         file_obj = self.get_object()
-        
+
         if not file_obj.preview_data:
-            return error_response("Aucune donnée d'aperçu disponible. Traitez d'abord le fichier.")
-        
+            return error_response("Aucune donnée disponible — traitez d'abord le fichier.")
+
+        preview_rows = file_obj.preview_data
+        # Normaliser : liste de dicts → headers + rows (listes)
+        if preview_rows and isinstance(preview_rows[0], dict):
+            headers = list(preview_rows[0].keys())
+            rows = [[row.get(h) for h in headers] for row in preview_rows]
+        else:
+            headers = []
+            rows = preview_rows
+
         return success_response({
-            'preview': file_obj.preview_data,
-            'schema': file_obj.schema,
-            'row_count': file_obj.row_count,
-            'column_count': file_obj.column_count
+            'headers':    headers,
+            'rows':       rows,
+            'schema':     file_obj.schema,
+            'row_count':  file_obj.row_count,
+            'column_count': file_obj.column_count,
         }, "Aperçu récupéré")
 
 

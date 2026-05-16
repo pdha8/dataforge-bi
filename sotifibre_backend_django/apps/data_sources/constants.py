@@ -171,14 +171,12 @@ API_TYPES = [
 # TYPES DE FICHIERS
 # ============================================================================
 FILE_TYPES = [
-    ('csv', '📊 CSV'),
-    ('excel', '📈 Excel (XLSX)'),
+    ('csv',  '📊 CSV'),
+    ('xlsx', '📈 Excel (XLSX)'),
+    ('yaml', '📋 YAML'),
     ('json', '🔧 JSON'),
-    ('parquet', '📦 Parquet'),
-    ('avro', '📀 Avro'),
-    ('orc', '🎯 ORC'),
-    ('xml', '📄 XML'),
-    ('txt', '📝 TXT'),
+    ('tsv',  '📑 TSV (Tabulé)'),
+    ('html', '🌐 HTML'),
 ]
 
 # ============================================================================

@@ -120,13 +120,15 @@ class DimensionalSchemaViewSet(viewsets.ModelViewSet):
         
         return success_response({'sql': sql}, "SQL généré avec succès")
     
-    @action(detail=True, methods=['get'])
+    @action(detail=True, methods=['get', 'post'])
     def validate(self, request, pk=None):
-        """Valide la configuration du schéma"""
+        """Valide la configuration du schéma. GET ou POST acceptés —
+        l'UI appelle en POST car c'est une action explicite déclenchée
+        par un bouton ; GET reste accepté pour les sondes/debug."""
         schema = self.get_object()
         service = DimensionalSchemaService(schema)
         result = service.validate()
-        
+
         return success_response(result, "Validation terminée")
     
     @action(detail=True, methods=['post'])

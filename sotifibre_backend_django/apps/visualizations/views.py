@@ -246,15 +246,19 @@ class ReportViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['post'])
     def generate(self, request, pk=None):
-        """Génère le rapport"""
+        """Génère le rapport et retourne le fichier en téléchargement"""
         report = self.get_object()
         service = ReportGenerationService(report)
         result = service.generate(request.user)
-        
+
         if result['success']:
-            return success_response(result, "Rapport généré avec succès")
+            response = HttpResponse(result['content'], content_type=result['content_type'])
+            response['Content-Disposition'] = f'attachment; filename="{result["filename"]}"'
+            response['X-Report-Id'] = str(report.id)
+            response['X-Execution-Time-Ms'] = str(result['execution_time_ms'])
+            return response
         else:
-            return error_response(result.get('error'), status_code=500)
+            return error_response(result.get('error', 'Erreur de génération'), status_code=500)
     
     @action(detail=False, methods=['get'])
     def pending(self, request):
@@ -291,40 +295,52 @@ class FavoriteViewSet(viewsets.ModelViewSet):
         item_id = request.data.get('item_id')
         item_type = request.data.get('item_type', 'dashboard')
         notes = request.data.get('notes', '')
-        
-        if item_type == 'dashboard':
-            item = Dashboard.objects.get(id=item_id)
-        elif item_type == 'kpi':
-            item = KPI.objects.get(id=item_id)
-        elif item_type == 'report':
-            item = Report.objects.get(id=item_id)
-        else:
-            return error_response("Type d'élément invalide", status_code=400)
-        
+
+        if not item_id:
+            return error_response("item_id est requis", status_code=400)
+
+        try:
+            if item_type == 'dashboard':
+                item = Dashboard.objects.get(id=item_id)
+            elif item_type == 'kpi':
+                item = KPI.objects.get(id=item_id)
+            elif item_type == 'report':
+                item = Report.objects.get(id=item_id)
+            else:
+                return error_response("Type d'élément invalide (dashboard, kpi, report)", status_code=400)
+        except Exception:
+            return not_found_response(f"{item_type} #{item_id} introuvable")
+
         favorite = Favorite.objects.add_favorite(request.user, item, item_type, notes)
-        
+
         return created_response(
             FavoriteSerializer(favorite).data,
             "Favori ajouté avec succès"
         )
-    
+
     @action(detail=False, methods=['post'])
     def remove(self, request):
         """Supprime un favori"""
         item_id = request.data.get('item_id')
         item_type = request.data.get('item_type', 'dashboard')
-        
-        if item_type == 'dashboard':
-            item = Dashboard.objects.get(id=item_id)
-        elif item_type == 'kpi':
-            item = KPI.objects.get(id=item_id)
-        elif item_type == 'report':
-            item = Report.objects.get(id=item_id)
-        else:
-            return error_response("Type d'élément invalide", status_code=400)
-        
+
+        if not item_id:
+            return error_response("item_id est requis", status_code=400)
+
+        try:
+            if item_type == 'dashboard':
+                item = Dashboard.objects.get(id=item_id)
+            elif item_type == 'kpi':
+                item = KPI.objects.get(id=item_id)
+            elif item_type == 'report':
+                item = Report.objects.get(id=item_id)
+            else:
+                return error_response("Type d'élément invalide (dashboard, kpi, report)", status_code=400)
+        except Exception:
+            return not_found_response(f"{item_type} #{item_id} introuvable")
+
         Favorite.objects.remove_favorite(request.user, item, item_type)
-        
+
         return success_response(None, "Favori supprimé avec succès")
 
 

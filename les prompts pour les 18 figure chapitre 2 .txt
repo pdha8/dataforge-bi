@@ -1,0 +1,549 @@
+Voici tous les prompts pour les 18 figures du Chapitre 2, un par un :
+
+---
+
+**Prompt 1 — Architecture générale d'un système de Business Intelligence**
+
+```
+Créer un diagramme d'architecture montrant les composants d'un système de Business Intelligence complet.
+
+Disposition en flux horizontal de gauche à droite avec 4 blocs principaux reliés par des flèches :
+
+Bloc 1 - SOURCES DE DONNÉES (à gauche) :
+- Icône de fichier : Fichiers (CSV, Excel, JSON, XML)
+- Icône de base de données : Bases de données (PostgreSQL, MySQL, Oracle)
+- Icône de cloud : API REST / Services Web
+- Icône de tableau : Fichiers plats (TSV, logs)
+
+Bloc 2 - PROCESSUS ETL (au centre-gauche) :
+- Extraction : connecteurs vers les sources
+- Transformation : nettoyage, standardisation, agrégation
+- Chargement : insertion dans l'entrepôt
+
+Bloc 3 - DATA WAREHOUSE (au centre-droit) :
+- Entrepôt de données centralisé
+- Schéma en étoile (table de faits + dimensions)
+- Données historisées et optimisées pour l'analyse
+
+Bloc 4 - COUCHE DE PRÉSENTATION (à droite) :
+- Tableaux de bord interactifs
+- Graphiques (barres, lignes, circulaires)
+- Indicateurs KPI
+- Rapports et exports
+
+Flèches entre chaque bloc montrant le flux de données : Sources → ETL → Data Warehouse → Visualisation.
+
+Style professionnel, fond blanc, couleurs distinctes pour chaque bloc (bleu pour sources, orange pour ETL, vert pour Data Warehouse, violet pour présentation), texte en français.
+```
+
+---
+
+**Prompt 2 — Schéma du processus ETL**
+
+```
+Créer un diagramme détaillé du processus ETL (Extraction, Transformation, Chargement) pour une plateforme de Business Intelligence.
+
+Disposition en 3 colonnes avec des flèches de flux entre elles :
+
+COLONNE 1 - EXTRACTION (couleur bleue) :
+Titre : "Extract (Extraction)"
+Sources multiples en entrée :
+- Fichiers CSV / Excel
+- Bases de données relationnelles
+- API REST
+- Services web
+Flèche vers : données brutes extraites
+
+COLONNE 2 - TRANSFORMATION (couleur orange) :
+Titre : "Transform (Transformation)"
+Opérations listées verticalement :
+- Nettoyage des données (doublons, valeurs nulles)
+- Standardisation des formats (dates, devises)
+- Filtrage selon critères
+- Agrégation et regroupement
+- Calcul de nouvelles colonnes
+- Enrichissement et jointures
+Flèche vers : données propres et structurées
+
+COLONNE 3 - CHARGEMENT (couleur verte) :
+Titre : "Load (Chargement)"
+Destination :
+- Data Warehouse
+- Table de faits
+- Tables de dimensions
+Deux modes indiqués :
+- Full Load (chargement complet)
+- Incremental Load (chargement incrémental)
+
+Style professionnel, fond blanc, texte en français, flèches épaisses entre les colonnes.
+```
+
+---
+
+**Prompt 3 — Comparaison OLTP vs OLAP**
+
+```
+Créer un diagramme comparatif entre les bases de données OLTP et OLAP (Data Warehouse).
+
+Disposition en deux colonnes côte à côte avec un titre pour chaque :
+
+COLONNE GAUCHE - OLTP (Online Transaction Processing) :
+Couleur : bleu clair
+- Objectif : Transactions quotidiennes
+- Opérations : INSERT, UPDATE, DELETE fréquents
+- Données : Actuelles, en temps réel
+- Requêtes : Simples, courtes, sur peu de lignes
+- Utilisateurs : Employés opérationnels
+- Structure : Tables normalisées (3NF)
+- Volume : Gigaoctets
+- Exemple : Système de gestion de commandes
+
+COLONNE DROITE - OLAP (Online Analytical Processing) :
+Couleur : vert
+- Objectif : Analyse et aide à la décision
+- Opérations : SELECT complexes, agrégations
+- Données : Historiques, consolidées
+- Requêtes : Complexes, longues, sur millions de lignes
+- Utilisateurs : Analystes, décideurs
+- Structure : Schéma en étoile (dénormalisé)
+- Volume : Téraoctets
+- Exemple : Data Warehouse pour l'analyse des ventes
+
+Au centre, une flèche bidirectionnelle avec le texte "ETL" montrant que les données passent de l'OLTP vers l'OLAP.
+
+Style professionnel sous forme de tableau comparatif, fond blanc, texte en français.
+```
+
+---
+
+**Prompt 4 — Exemple de schéma en étoile**
+
+```
+Créer un diagramme de schéma en étoile (star schema) générique pour un Data Warehouse d'analyse des ventes.
+
+Table de faits centrale : Fait_Ventes
+Couleur : rouge/orange foncé
+Champs :
+- id_fait (PK)
+- id_temps (FK)
+- id_produit (FK)
+- id_client (FK)
+- id_region (FK)
+- montant_vente (mesure)
+- quantite (mesure)
+- chiffre_affaires (mesure)
+- cout (mesure)
+- marge (mesure)
+
+4 Tables de dimensions disposées en étoile autour :
+
+En haut - Dim_Temps (couleur bleue) :
+- id_temps (PK), date, jour, mois, trimestre, annee, jour_semaine
+
+À droite - Dim_Produit (couleur verte) :
+- id_produit (PK), nom_produit, categorie, sous_categorie, prix_unitaire, fournisseur
+
+En bas - Dim_Client (couleur violette) :
+- id_client (PK), nom_client, segment, email, telephone, date_inscription
+
+À gauche - Dim_Region (couleur orange) :
+- id_region (PK), ville, pays, continent, code_postal
+
+Chaque dimension est reliée à la table de faits par une ligne avec cardinalité 1 vers *.
+
+Style professionnel, fond blanc, texte en français, disposition en étoile claire.
+```
+
+---
+
+**Prompt 5 — Exemples de types de visualisations en BI**
+
+```
+Créer une image montrant 6 types de visualisations couramment utilisées en Business Intelligence, disposées en grille 3x2.
+
+Ligne 1 :
+1. Diagramme en barres verticales : "Ventes par Produit" avec 5 barres de hauteurs différentes (Produit A: 45000, Produit B: 32000, Produit C: 58000, Produit D: 21000, Produit E: 39000)
+
+2. Graphique linéaire : "Évolution du Chiffre d'Affaires Mensuel" avec une courbe montrant une tendance croissante sur 12 mois (Jan à Déc)
+
+3. Diagramme circulaire : "Répartition par Segment Client" avec 4 parts (Entreprises: 40%, PME: 30%, Particuliers: 20%, Gouvernement: 10%)
+
+Ligne 2 :
+4. Graphique en aires : "Volume des Ventes Cumulé" avec une surface colorée sous une courbe croissante
+
+5. Indicateur KPI : "Chiffre d'Affaires" affichant la valeur "1.250.000 €" avec une flèche verte vers le haut et le texte "+15% vs objectif"
+
+6. Tableau de bord : miniature d'un dashboard combinant un graphique en barres, un graphique linéaire et 3 KPI en haut
+
+Chaque visualisation a un titre en dessous. Style professionnel avec des données fictives réalistes, fond blanc, texte en français.
+```
+
+---
+
+**Prompt 6 — Interface de Microsoft Power BI Desktop**
+
+```
+Créer une capture d'écran réaliste de l'interface de Microsoft Power BI Desktop montrant un tableau de bord d'analyse des ventes.
+
+L'interface doit montrer :
+- La barre de menu en haut (Fichier, Accueil, Insertion, Modélisation, Affichage)
+- Le ruban avec les outils de mise en forme
+- Le panneau de visualisations à droite avec les types de graphiques
+- Le panneau des champs à droite avec la liste des tables et colonnes
+- La zone centrale contenant un tableau de bord avec :
+  - Un graphique en barres "Ventes par Région"
+  - Un graphique linéaire "Tendance Mensuelle"
+  - Un diagramme circulaire "Part de Marché"
+  - 3 cartes KPI en haut (Chiffre d'Affaires, Nombre de Clients, Marge)
+- Le panneau des filtres à droite
+
+Style réaliste de l'interface Power BI avec le thème sombre/gris caractéristique de Microsoft, données fictives en français.
+```
+
+---
+
+**Prompt 7 — Interface de Tableau Desktop**
+
+```
+Créer une capture d'écran réaliste de l'interface de Tableau Desktop montrant un tableau de bord d'analyse.
+
+L'interface doit montrer :
+- La barre de menu en haut
+- Le panneau "Données" à gauche avec les dimensions et les mesures
+- Le panneau "Fiches" (Marks) avec Couleur, Taille, Étiquette
+- Les étagères (Shelves) : Colonnes et Lignes en haut
+- La zone centrale avec un tableau de bord contenant :
+  - Une carte géographique colorée par région
+  - Un graphique en barres horizontales
+  - Un graphique de tendance temporelle
+  - Des filtres interactifs
+- Les onglets de feuilles en bas (Feuille 1, Tableau de bord 1)
+
+Style réaliste de l'interface Tableau avec le fond blanc caractéristique, données fictives.
+```
+
+---
+
+**Prompt 8 — Interface d'Apache Superset**
+
+```
+Créer une capture d'écran réaliste de l'interface web d'Apache Superset montrant un tableau de bord.
+
+L'interface doit montrer :
+- La barre de navigation en haut avec le logo Superset, les menus (Dashboards, Charts, SQL Lab, Data)
+- Un tableau de bord contenant :
+  - Un graphique en barres empilées
+  - Un graphique linéaire avec plusieurs séries
+  - Un diagramme circulaire
+  - Un tableau de données
+  - Des filtres en haut du dashboard
+- Le fond blanc avec le style moderne de Superset
+- Les couleurs vives caractéristiques de Superset
+
+Style réaliste de l'interface web Superset, données fictives.
+```
+
+---
+
+**Prompt 9 — Interface de Metabase**
+
+```
+Créer une capture d'écran réaliste de l'interface web de Metabase montrant un tableau de bord simple.
+
+L'interface doit montrer :
+- La barre de navigation en haut avec le logo Metabase, la barre de recherche, le bouton "+ Nouveau"
+- Un tableau de bord contenant :
+  - Des cartes KPI en haut (chiffres clés avec tendances)
+  - Un graphique en barres
+  - Un graphique linéaire
+  - Un compteur circulaire
+- Le style épuré et minimaliste caractéristique de Metabase
+- Le fond blanc/gris clair
+- Les couleurs bleues/vertes de Metabase
+
+Style réaliste de l'interface Metabase, données fictives, interface simple et accessible.
+```
+
+---
+
+**Prompt 10 — Logo et architecture Django REST Framework**
+
+```
+Créer un diagramme montrant l'architecture de Django REST Framework pour une API REST.
+
+En haut : le logo Django (texte "Django" en vert sur fond blanc) et le texte "Django REST Framework"
+
+En dessous, un diagramme d'architecture en couches :
+
+Couche 1 - Client (en haut) :
+- Navigateur Web / Application Mobile / Application Vue.js
+- Requêtes HTTP : GET, POST, PUT, DELETE
+
+Couche 2 - URLs & Routing :
+- urls.py : routage des requêtes vers les vues
+
+Couche 3 - Views (Vues API) :
+- APIView, ViewSet, GenericAPIView
+- Authentification JWT
+- Permissions (IsAuthenticated, IsAdmin)
+
+Couche 4 - Serializers (Sérialiseurs) :
+- Validation des données entrantes
+- Conversion Model → JSON (sérialisation)
+- Conversion JSON → Model (désérialisation)
+
+Couche 5 - Models (Modèles) :
+- ORM Django
+- Définition des tables et relations
+
+Couche 6 - Database (Base de données) :
+- PostgreSQL
+
+Flèches bidirectionnelles entre chaque couche. Couleurs : vert Django pour les couches principales.
+
+Style professionnel, fond blanc, texte en français.
+```
+
+---
+
+**Prompt 11 — Logo et écosystème Laravel**
+
+```
+Créer un diagramme montrant l'écosystème du framework Laravel.
+
+Au centre : le logo Laravel (texte "Laravel" en rouge avec l'icône de flamme)
+
+Autour du logo, disposés en cercle, les composants principaux de l'écosystème :
+
+1. Eloquent ORM : "Gestion des bases de données avec une syntaxe élégante"
+2. Blade Templates : "Moteur de templates pour les vues"
+3. Artisan CLI : "Interface en ligne de commande"
+4. Laravel Sanctum : "Authentification API par tokens"
+5. Laravel Queue : "Files d'attente pour tâches asynchrones"
+6. Laravel Migrations : "Versionnement du schéma de base de données"
+7. Composer : "Gestionnaire de dépendances PHP"
+8. PHPUnit : "Framework de tests unitaires"
+
+Chaque composant est dans une bulle colorée reliée au centre par une ligne.
+
+Architecture MVC en dessous :
+Model ↔ Controller ↔ View avec des flèches bidirectionnelles.
+
+Style professionnel, fond blanc, couleurs rouge/orange de Laravel, texte en français.
+```
+
+---
+
+**Prompt 12 — Logo et architecture Vue.js 3**
+
+```
+Créer un diagramme montrant l'architecture et l'écosystème de Vue.js 3.
+
+En haut : le logo Vue.js (le V vert caractéristique) avec le texte "Vue.js 3"
+
+En dessous, l'architecture d'une application Vue.js en couches :
+
+Couche 1 - Composants Vue (SFC - Single File Components) :
+- Template (HTML)
+- Script (TypeScript / Composition API)
+- Style (CSS / Scoped)
+
+Couche 2 - Écosystème Vue.js :
+Disposés en ligne :
+- Vue Router : "Navigation SPA, routes dynamiques"
+- Pinia : "State Management, remplaçant de Vuex"
+- Axios : "Client HTTP pour API REST"
+- Vite : "Build tool ultra-rapide"
+
+Couche 3 - Outils de qualité :
+- TypeScript : "Typage statique"
+- ESLint : "Analyse de code"
+- Prettier : "Formatage automatique"
+- Vitest : "Tests unitaires"
+
+Couche 4 - Communication :
+- API REST (JSON) ↔ Backend Django / Laravel
+
+Flèches montrant le flux de données : Composants → Pinia (état) → Axios → API REST → Backend
+
+Style professionnel, fond blanc, couleurs vert Vue.js, texte en français.
+```
+
+---
+
+**Prompt 13 — Logo PostgreSQL et fonctionnalités principales**
+
+```
+Créer un diagramme montrant PostgreSQL et ses fonctionnalités principales.
+
+En haut au centre : le logo PostgreSQL (l'éléphant bleu "Slonik") avec le texte "PostgreSQL 18"
+
+En dessous, disposées en grille 2x3, les fonctionnalités principales dans des cadres colorés :
+
+1. "Types de données avancés" (bleu) :
+   - JSON / JSONB
+   - Arrays, Hstore
+   - Types géométriques
+   - Types personnalisés
+
+2. "Requêtes analytiques" (vert) :
+   - Window Functions
+   - CTE (Common Table Expressions)
+   - Requêtes récursives
+   - Agrégations avancées
+
+3. "Performance" (orange) :
+   - Optimiseur de requêtes
+   - Index B-tree, Hash, GiST, GIN
+   - Partitionnement de tables
+   - Requêtes parallèles
+
+4. "Fiabilité" (rouge) :
+   - Conformité ACID
+   - MVCC (Multi-Version Concurrency Control)
+   - Write-Ahead Logging (WAL)
+   - Point-in-Time Recovery
+
+5. "Sécurité" (violet) :
+   - Authentification SCRAM-SHA-256
+   - Contrôle d'accès par rôles
+   - Row-Level Security
+   - Chiffrement SSL/TLS
+
+6. "Extensibilité" (cyan) :
+   - Fonctions personnalisées (PL/pgSQL)
+   - Extensions (PostGIS, pg_trgm)
+   - Types et opérateurs personnalisés
+   - Foreign Data Wrappers
+
+Style professionnel, fond blanc, texte en français.
+```
+
+---
+
+**Prompt 14 — Interface de VMware Workstation Pro avec la VM Ubuntu**
+
+```
+Créer une capture d'écran réaliste de l'interface de VMware Workstation Pro montrant une machine virtuelle Ubuntu Server en cours d'exécution.
+
+L'interface doit montrer :
+- La barre de titre VMware Workstation Pro en haut
+- Le panneau de gauche avec la liste des machines virtuelles (Ubuntu 64 bits sélectionné)
+- Le panneau principal à droite montrant :
+  - Les paramètres de la VM : Mémoire 8 Go, Processeurs 4, Disque dur 40 Go, Réseau NAT
+  - L'état : "Powered On" (En cours d'exécution)
+  - Un aperçu du terminal Ubuntu avec le prompt : adoum@server-web-adoum:~$
+- La barre d'outils en haut avec les boutons Power On, Suspend, Snapshot
+- Le résumé de la configuration matérielle
+
+Style réaliste de l'interface VMware Workstation Pro, thème gris foncé caractéristique de VMware.
+```
+
+---
+
+**Prompt 15 — Interface de VS Code avec Remote SSH**
+
+```
+Créer une capture d'écran réaliste de Visual Studio Code connecté à un serveur distant via Remote SSH.
+
+L'interface doit montrer :
+- La barre de titre avec "VS Code" et l'indicateur "SSH: 192.168.224.128" en bas à gauche (fond vert)
+- L'explorateur de fichiers à gauche montrant la structure du projet :
+  - Integrated_BI_backend_django/
+    - core/
+    - nameproject/
+    - manage.py
+  - Integrated_BI_backend_laravel/
+    - app/
+    - routes/
+  - Integrated_BI_frontend_vue/
+    - src/
+    - package.json
+- L'éditeur central avec un fichier Python ouvert (models.py ou views.py)
+- Le terminal intégré en bas avec le prompt : adoum@server-web-adoum:~/Integrated_BI$
+- La barre latérale avec les icônes : Explorer, Search, Source Control, Extensions
+- Les extensions installées visibles : Python, Volar, GitLens
+
+Style réaliste de VS Code avec le thème sombre par défaut, syntaxe Python colorée.
+```
+
+---
+
+**Prompt 16 — Dépôt GitHub du projet Integrated BI**
+
+```
+Créer une capture d'écran réaliste de la page GitHub du dépôt Integrated_BI.
+
+L'interface doit montrer :
+- L'en-tête GitHub avec le nom du dépôt : "Adoum-Cyber / Integrated_BI"
+- Les statistiques : 1 branche (master), 1 commit
+- Les boutons : Code, Issues, Pull requests, Actions
+- La liste des dossiers du projet :
+  - Integrated_BI_backend_django/
+  - Integrated_BI_backend_laravel/
+  - Integrated_BI_frontend_vue/
+  - .gitignore
+- Le message du dernier commit : "Initial commit: Django, Laravel, and Vue projects for project PFE - 2026"
+- Le fichier README.md affiché en bas
+- Le langage détecté : Python, PHP, TypeScript, Vue
+
+Style réaliste de l'interface GitHub avec le thème clair, fond blanc.
+```
+
+---
+
+**Prompt 17 — Interface de dbForge Studio pour PostgreSQL**
+
+```
+Créer une capture d'écran réaliste de l'interface de dbForge Studio for PostgreSQL.
+
+L'interface doit montrer :
+- La barre de menu en haut (File, Edit, View, Database, Tools)
+- Le panneau "Database Explorer" à gauche montrant :
+  - Serveur PostgreSQL 18
+    - pfe_db (base de données)
+      - Tables :
+        - utilisateur
+        - source_donnees
+        - pipeline_etl
+        - fait_ventes
+        - dim_temps
+        - dim_produit
+- L'éditeur SQL au centre avec une requête :
+  SELECT * FROM fait_ventes
+  JOIN dim_produit ON fait_ventes.id_produit = dim_produit.id_produit
+  LIMIT 10;
+- Le panneau de résultats en bas montrant un tableau de données avec des colonnes et des lignes
+- La barre d'état en bas montrant la connexion active
+
+Style réaliste de l'interface dbForge Studio, thème professionnel clair.
+```
+
+---
+
+**Prompt 18 — Positionnement d'Integrated BI par rapport aux solutions existantes**
+
+```
+Créer un diagramme de positionnement montrant où se situe Integrated BI par rapport aux solutions de Business Intelligence existantes.
+
+Disposition en graphique à 2 axes :
+- Axe horizontal (X) : "Coût" allant de "Gratuit" (gauche) à "Très élevé" (droite)
+- Axe vertical (Y) : "Fonctionnalités intégrées" allant de "Basiques" (bas) à "Complètes" (haut)
+
+Positionnement des solutions (bulles de tailles différentes) :
+
+- Power BI : en haut à droite (fonctionnalités complètes, coût élevé), bulle bleue, grande taille
+- Tableau : en haut très à droite (fonctionnalités très complètes, coût très élevé), bulle orange, grande taille
+- Apache Superset : au milieu à gauche (fonctionnalités moyennes, gratuit), bulle verte, taille moyenne
+- Metabase : en bas à gauche (fonctionnalités basiques, gratuit), bulle violette, petite taille
+- Integrated BI : en haut à gauche (fonctionnalités complètes, gratuit), bulle rouge avec une étoile, taille moyenne, entourée d'un cercle doré pour la mettre en valeur
+
+Légende en dessous avec le nom et la couleur de chaque solution.
+Texte "Zone optimale" avec une flèche pointant vers Integrated BI.
+
+Style professionnel, fond blanc, texte en français.
+```
+
+---
+
+Voilà les 18 prompts ! Commence par ceux qui te semblent les plus importants. Pour les captures d'écran d'interfaces (Prompts 6, 7, 8, 9, 14, 15, 16, 17), tu peux aussi utiliser de vraies captures d'écran depuis ton navigateur ou ton poste de travail si tu préfères un rendu plus authentique.

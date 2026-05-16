@@ -117,7 +117,7 @@ class DataSourceCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = DataSource
         fields = [
-            'name', 'description', 'source_type', 'database_type',
+            'id', 'name', 'description', 'source_type', 'database_type',
             'connection_string', 'host', 'port', 'database_name', 'schema_name',
             'username', 'password', 'api_url', 'api_endpoint', 'api_headers',
             'api_params', 'file_path', 'file_url', 'file_encoding', 'file_delimiter',
@@ -126,6 +126,7 @@ class DataSourceCreateSerializer(serializers.ModelSerializer):
             'use_ssl', 'ssl_certificate', 'sync_frequency', 'auto_refresh_enabled',
             'tags', 'category', 'business_domain', 'owner_team'
         ]
+        read_only_fields = ['id']
     
     def create(self, validated_data):
         # Le mot de passe sera chiffré dans le service
@@ -231,19 +232,7 @@ class DataQueryDetailSerializer(DataQuerySerializer):
 
 class DataQueryCreateSerializer(serializers.ModelSerializer):
     """Sérialiseur pour création de requête"""
-    
-    class Meta:
-        model = DataQuery
-        fields = [
-            'data_source', 'name', 'description', 'query_type',
-            'query_text', 'parameters', 'is_favorite', 'is_public',
-            'tags', 'cache_ttl', 'is_cached'
-        ]
 
-
-class DataQueryCreateSerializer(serializers.ModelSerializer):
-    """Sérialiseur pour création de requête"""
-    
     class Meta:
         model = DataQuery
         fields = [
@@ -311,55 +300,46 @@ class QueryStepSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at']
 
 
-# apps/data_sources/serializers.py - CORRIGER DataSourceFileSerializer
-
 class DataSourceFileSerializer(serializers.ModelSerializer):
     """Sérialiseur pour DataSourceFile"""
-    
-    data_source_name = serializers.CharField(source='data_source.name', read_only=True)
+
+    data_source_name = serializers.SerializerMethodField()
     uploaded_by_name = serializers.CharField(source='uploaded_by.get_full_name', read_only=True)
     process_status_display = serializers.CharField(source='get_process_status_display', read_only=True)
+    file_type_display = serializers.CharField(source='get_file_type_display', read_only=True)
     file_size_mb = serializers.SerializerMethodField()
     is_processed = serializers.BooleanField(read_only=True)
-    
-    # Utiliser SerializerMethodField pour les dates
-    created_at = serializers.SerializerMethodField()
-    updated_at = serializers.SerializerMethodField()
+
+    # original_name est auto-rempli depuis le fichier uploadé — pas requis dans le formulaire
+    original_name = serializers.CharField(required=False, default='', allow_blank=True)
+
+    created_at  = serializers.SerializerMethodField()
+    updated_at  = serializers.SerializerMethodField()
     processed_at = serializers.SerializerMethodField()
     uploaded_at = serializers.SerializerMethodField()
-    
+
     class Meta:
         model = DataSourceFile
         fields = '__all__'
         read_only_fields = ['id', 'created_at', 'updated_at', 'file_hash', 'file_size']
-    
+
+    def get_data_source_name(self, obj):
+        return obj.data_source.name if obj.data_source else None
+
     def get_file_size_mb(self, obj):
-        """Calcule la taille en MB"""
         return obj.file_size_mb
-    
+
     def get_created_at(self, obj):
-        """Récupère created_at"""
-        if obj.created_at:
-            return obj.created_at.isoformat()
-        return None
-    
+        return obj.created_at.isoformat() if obj.created_at else None
+
     def get_updated_at(self, obj):
-        """Récupère updated_at"""
-        if obj.updated_at:
-            return obj.updated_at.isoformat()
-        return None
-    
+        return obj.updated_at.isoformat() if obj.updated_at else None
+
     def get_processed_at(self, obj):
-        """Récupère processed_at"""
-        if obj.processed_at:
-            return obj.processed_at.isoformat()
-        return None
-    
+        return obj.processed_at.isoformat() if obj.processed_at else None
+
     def get_uploaded_at(self, obj):
-        """Récupère uploaded_at (alias pour created_at)"""
-        if obj.created_at:
-            return obj.created_at.isoformat()
-        return None
+        return obj.created_at.isoformat() if obj.created_at else None
 
 
 class DataSourceConnectionSerializer(serializers.ModelSerializer):

@@ -59,17 +59,17 @@ REFRESH_FREQUENCIES = [
 ]
 
 # ============================================================================
-# FORMATS D'EXPORT
+# FORMATS D'EXPORT (6 formats standards — alignés sur data_sources.FILE_TYPES)
 # ============================================================================
+# Note : les rapports HTML peuvent être convertis côté serveur en PDF via
+# WeasyPrint, mais le format choisi par l'utilisateur reste HTML.
 EXPORT_FORMATS = [
-    ('png', '🖼️ PNG (Image)'),
-    ('svg', '📐 SVG (Vectoriel)'),
-    ('pdf', '📄 PDF (Document)'),
-    ('csv', '📊 CSV (Tableur)'),
-    ('excel', '📈 Excel (XLSX)'),
+    ('xlsx', '📈 Excel (XLSX)'),
+    ('csv',  '📊 CSV (Tableur)'),
+    ('yaml', '📋 YAML'),
     ('json', '🔧 JSON (API)'),
+    ('tsv',  '📑 TSV (Tabulé)'),
     ('html', '🌐 HTML (Web)'),
-    ('markdown', '📝 Markdown'),
 ]
 
 # ============================================================================
