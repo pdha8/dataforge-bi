@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: SOTIFibre Platform API
+  title: DataForge BI Platform API
   version: 1.0.0 (v1)
   description: IOT Sécurité Platform
 paths:

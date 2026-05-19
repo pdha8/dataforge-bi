@@ -1,7 +1,7 @@
-## **`/home/user/sotifibre/sotifibre_backend_django/docs/modules/data_sources.md`**
+## **`dataforge_backend/docs/modules/data_sources.md`**
 
 ```markdown
-# 🗄️ Sotifibre Data Sources - Documentation Technique
+# 🗄️ DataForge Data Sources - Documentation Technique
 
 ## Table des matières
 1. [Introduction](#introduction)
@@ -21,7 +21,7 @@
 
 ## Introduction
 
-Le module **Data Sources** de Sotifibre BI est responsable de la gestion de toutes les sources de données de la plateforme. Il supporte plus de **25 types de sources** différents, allant des bases de données relationnelles aux APIs, en passant par les fichiers et le cloud storage.
+Le module **Data Sources** de DataForge BI est responsable de la gestion de toutes les sources de données de la plateforme. Il supporte plus de **25 types de sources** différents, allant des bases de données relationnelles aux APIs, en passant par les fichiers et le cloud storage.
 
 ### 🎯 Objectifs
 - 🔌 **Connectivité universelle** - Support de 25+ types de sources
@@ -812,7 +812,7 @@ for name, query in kpis.items():
 
 ## Conclusion
 
-Le module Data Sources de Sotifibre offre une solution complète et professionnelle pour la gestion des sources de données BI avec :
+Le module Data Sources de DataForge offre une solution complète et professionnelle pour la gestion des sources de données BI avec :
 
 - 🔌 **25+ types de sources** supportés
 - 📁 **Gestion de fichiers** avancée
@@ -825,5 +825,5 @@ Le module Data Sources de Sotifibre offre une solution complète et professionne
 
 **Version:** 1.0.0  
 **Dernière mise à jour:** 24 Février 2026  
-**Mainteneur:** Sotifibre
+**Mainteneur:** DataForge
 ```

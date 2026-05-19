@@ -1,7 +1,7 @@
-## **`/home/user/sotifibre/sotifibre_backend_django/apps/core/`**
+## **`dataforge_backend/apps/core/`**
 
 ```markdown
-# ⚙️ Sotifibre Core - Documentation Technique
+# ⚙️ DataForge Core - Documentation Technique
 
 ## Table des matières
 1. [Introduction](#introduction)
@@ -23,7 +23,7 @@
 
 ## Introduction
 
-Le module **Core** de Sotifibre constitue la fondation technique de la plateforme Business Intelligence. Il fournit l'ensemble des **composants réutilisables**, des **classes de base**, des **utilitaires** et des **fonctionnalités transversales** nécessaires au développement de toutes les applications BI.
+Le module **Core** de DataForge constitue la fondation technique de la plateforme Business Intelligence. Il fournit l'ensemble des **composants réutilisables**, des **classes de base**, des **utilitaires** et des **fonctionnalités transversales** nécessaires au développement de toutes les applications BI.
 
 ### 📦 Ce que contient le Core
 - ✅ **Modèles abstraits** - Classes de base pour tous les modèles
@@ -591,7 +591,7 @@ from apps.core.constants import (
 )
 
 # Informations plateforme
-print(PLATFORM['name'])        # "Sotifibre"
+print(PLATFORM['name'])        # "DataForge"
 print(PLATFORM['version'])     # "1.0.0"
 
 # Types de graphiques
@@ -810,7 +810,7 @@ class QuerySerializer(serializers.Serializer):
 
 ## Conclusion
 
-Le module Core de Sotifibre fournit tous les composants réutilisables nécessaires pour construire des applications BI robustes. En utilisant ces composants, vous bénéficiez de :
+Le module Core de DataForge fournit tous les composants réutilisables nécessaires pour construire des applications BI robustes. En utilisant ces composants, vous bénéficiez de :
 
 - 🔒 **Sécurité** - Permissions et validation intégrées
 - ⚡ **Performance** - Cache et optimisation
@@ -818,7 +818,7 @@ Le module Core de Sotifibre fournit tous les composants réutilisables nécessai
 - 🔧 **Productivité** - Composants prêts à l'emploi
 - 📈 **Évolutivité** - Architecture modulaire
 
-Pour toute question, contactez l'équipe Sotifibre Analytics.
+Pour toute question, contactez l'équipe DataForge Analytics.
 
 ---
 

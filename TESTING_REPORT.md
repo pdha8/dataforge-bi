@@ -117,7 +117,7 @@ Aucun n'est un bug backend. Tous trois sont des artefacts de la génération AI 
 ### Round 3 — depuis l'OpenAPI spec officielle (349 endpoints)
 
 Une 3e itération a été tentée en alimentant TestSprite avec le `code_summary.yaml`
-extrait automatiquement depuis `SOTIFibre Platform API (v1).yaml` (script
+extrait automatiquement depuis `dataforge-api-v1.yaml` (script
 `openapi_to_code_summary.py`). Couverture théorique élargie à 244 endpoints
 documentés avec leurs request_body et types.
 

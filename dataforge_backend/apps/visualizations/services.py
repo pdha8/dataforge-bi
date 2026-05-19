@@ -617,7 +617,7 @@ class ReportGenerationService:
     {css_page}
     @top-left   {{ content: "{self.report.name}"; font-size: 7.5pt; color: #9ca3af; font-family: sans-serif; }}
     @top-right  {{ content: "Page " counter(page) " / " counter(pages); font-size: 7.5pt; color: #9ca3af; font-family: sans-serif; }}
-    @bottom-right {{ content: "SOTIFibre BI · {generated_at}"; font-size: 7pt; color: #d1d5db; font-family: sans-serif; }}
+    @bottom-right {{ content: "DataForge BI · {generated_at}"; font-size: 7pt; color: #d1d5db; font-family: sans-serif; }}
   }}
 
   * {{ box-sizing: border-box; margin: 0; padding: 0; }}
@@ -772,7 +772,7 @@ class ReportGenerationService:
     </div>
   </div>
   <div style="text-align:right">
-    <div class="brand">SOTIFibre BI</div>
+    <div class="brand">DataForge BI</div>
     <div class="brand-sub">Plateforme d'Intelligence Économique</div>
   </div>
 </div>

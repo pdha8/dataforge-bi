@@ -1,7 +1,7 @@
-## **`/home/user/sotifibre/sotifibre_backend_django/docs/modules/users.md`**
+## **`dataforge_backend/docs/modules/users.md`**
 
 ```markdown
-# 👥 Sotifibre Users - Documentation Technique
+# 👥 DataForge Users - Documentation Technique
 
 ## Table des matières
 1. [Introduction](#introduction)
@@ -19,7 +19,7 @@
 
 ## Introduction
 
-Le module **Users** de Sotifibre gère l'ensemble des aspects liés aux utilisateurs de la plateforme Business Intelligence. Il fournit un système complet de gestion des utilisateurs, rôles, équipes, permissions et journalisation des activités.
+Le module **Users** de DataForge gère l'ensemble des aspects liés aux utilisateurs de la plateforme Business Intelligence. Il fournit un système complet de gestion des utilisateurs, rôles, équipes, permissions et journalisation des activités.
 
 ### 🎯 Objectifs
 - 🔐 **Authentification sécurisée** - Support email/username, 2FA, verrouillage
@@ -63,7 +63,7 @@ from apps.users.models import User
 
 # Créer un utilisateur
 user = User.objects.create_user(
-    email="analyste@sotifibre.com",
+    email="analyste@dataforge.tech",
     username="jdupont",
     password="secure123",
     first_name="Jean",
@@ -253,7 +253,7 @@ REST_FRAMEWORK = {
 # API - Connexion
 POST /api/token/login/
 {
-    "username": "analyste@sotifibre.com",
+    "username": "analyste@dataforge.tech",
     "password": "secure123"
 }
 
@@ -702,7 +702,7 @@ suspicious = UserActivity.objects.filter(
 
 ## Conclusion
 
-Le module Users de Sotifibre offre une base solide pour la gestion des utilisateurs BI avec :
+Le module Users de DataForge offre une base solide pour la gestion des utilisateurs BI avec :
 
 - 🔐 **Sécurité renforcée** - 2FA, verrouillage, journalisation
 - 👥 **Gestion avancée** - Rôles, équipes, permissions granulaires
@@ -714,5 +714,5 @@ Le module Users de Sotifibre offre une base solide pour la gestion des utilisate
 
 **Version:** 1.0.0  
 **Dernière mise à jour:** 21 Mars 2026  
-**Mainteneur:** Sotifibre Analytics
+**Mainteneur:** DataForge Analytics
 ```

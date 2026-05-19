@@ -16,7 +16,7 @@
 
 ## Présentation Générale
 
-Le module **Data Warehouse** est le système de stockage analytique central de la plateforme BI Sotifibre. Il permet de :
+Le module **Data Warehouse** est le système de stockage analytique central de la plateforme BI DataForge. Il permet de :
 
 - **Modélisation dimensionnelle** : Support des schémas en étoile, faits et dimensions
 - **Gestion des agrégations** : Tables pré-agrégées pour l'optimisation des performances

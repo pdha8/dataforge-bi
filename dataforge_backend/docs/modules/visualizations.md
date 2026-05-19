@@ -21,7 +21,7 @@
 
 ## Overview
 
-Le module **Visualizations** est le cœur de la présentation et de l'analyse BI de la plateforme Sotifibre. Il permet de créer, gérer et partager des tableaux de bord interactifs, des indicateurs de performance (KPIs) et des rapports automatisés.
+Le module **Visualizations** est le cœur de la présentation et de l'analyse BI de la plateforme DataForge. Il permet de créer, gérer et partager des tableaux de bord interactifs, des indicateurs de performance (KPIs) et des rapports automatisés.
 
 ### Fonctionnalités Clés
 
@@ -1093,5 +1093,5 @@ for activity in activities:
 
 Ce fichier de documentation doit être sauvegardé dans :
 ```
-/home/user/sotifibre/sotifibre_backend_django/docs/modules/visualizations.md
+dataforge_backend/docs/modules/visualizations.md
 ```

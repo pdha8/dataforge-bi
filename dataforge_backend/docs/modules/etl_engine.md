@@ -1,7 +1,7 @@
-## **`/home/user/sotifibre/sotifibre_backend_django/docs/modules/etl_engine.md`**
+## **`dataforge_backend/docs/modules/etl_engine.md`**
 
 ```markdown
-# 🔄 Sotifibre ETL Engine - Documentation Technique
+# 🔄 DataForge ETL Engine - Documentation Technique
 
 ## Table des matières
 1. [Introduction](#introduction)
@@ -21,7 +21,7 @@
 
 ## Introduction
 
-Le module **ETL Engine** de Sotifibre BI est le cœur du traitement des données. Il orchestre l'extraction, la transformation et le chargement des données entre différentes sources et destinations.
+Le module **ETL Engine** de DataForge BI est le cœur du traitement des données. Il orchestre l'extraction, la transformation et le chargement des données entre différentes sources et destinations.
 
 ### 🎯 Objectifs
 - 🔄 **Orchestration ETL/ELT** - Gestion complète des pipelines de données
@@ -747,7 +747,7 @@ result = orchestrator.execute_pipeline(pipeline_c.id)
 
 ## Conclusion
 
-Le module ETL Engine de Sotifibre offre une solution complète et professionnelle pour l'orchestration de pipelines de données avec :
+Le module ETL Engine de DataForge offre une solution complète et professionnelle pour l'orchestration de pipelines de données avec :
 
 - 🔄 **8 types de pipelines**
 - 🔧 **18+ types de transformations**
@@ -760,5 +760,5 @@ Le module ETL Engine de Sotifibre offre une solution complète et professionnell
 
 **Version:** 1.0.0  
 **Dernière mise à jour:** 28 Février 2026  
-**Mainteneur:** Sotifibre
+**Mainteneur:** DataForge
 ```

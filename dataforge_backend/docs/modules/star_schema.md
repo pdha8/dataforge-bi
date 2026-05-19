@@ -16,7 +16,7 @@
 
 ## Overview
 
-Le module **Star Schema** est une extension avancée de la plateforme Sotifibre BI qui permet la modélisation dimensionnelle sophistiquée. Il offre :
+Le module **Star Schema** est une extension avancée de la plateforme DataForge BI qui permet la modélisation dimensionnelle sophistiquée. Il offre :
 
 - **Schémas en étoile (Star Schema)** : Modélisation classique avec une table de faits et plusieurs dimensions
 - **Schémas en flocon (Snowflake Schema)** : Dimensions normalisées avec sous-dimensions
@@ -727,5 +727,5 @@ for rel in FactRelationship.objects.all():
 
 Cette documentation est à sauvegarder dans :
 ```
-/home/user/sotifibre/sotifibre_backend_django/docs/modules/star_schema.md
+dataforge_backend/docs/modules/star_schema.md
 ```
