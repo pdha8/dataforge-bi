@@ -1,0 +1,3 @@
+# SPA rewrite : toutes les routes inconnues → index.html (Vue Router prend le relais)
+# Format compatible Render + Netlify + Vercel.
+/*    /index.html   200

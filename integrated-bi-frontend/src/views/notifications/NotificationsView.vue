@@ -256,8 +256,8 @@ async function fetchNotifications(page = 1) {
 
 async function fetchUnreadCount() {
   try {
-    const res = await api.get<{ count: number }>('/api/notifications/notifications/unread_count/')
-    unreadCount.value = res.data.count ?? 0
+    const res = await api.get<{ count?: number; data?: { count?: number } }>('/api/notifications/notifications/unread_count/')
+    unreadCount.value = res.data?.data?.count ?? res.data?.count ?? 0
   } catch {
     unreadCount.value = 0
   }

@@ -1,18 +1,18 @@
 """
-Jazzmin Admin Settings for Sotifibre BI - Core, Users, Data Sources, ETL Engine, Data Warehouse, Star Schema, Visualizations & Notifications
+Jazzmin Admin Settings for DataForge BI - Core, Users, Data Sources, ETL Engine, Data Warehouse, Star Schema, Visualizations & Notifications
 """
 JAZZMIN_SETTINGS = {
     # ========================================================================
     # BRANDING
     # ========================================================================
-    "site_title": "Sotifibre BI Platform",
-    "site_header": "Sotifibre Administrator",
-    "site_brand": "📊 Sotifibre BI",
+    "site_title": "DataForge BI Platform",
+    "site_header": "DataForge Administrator",
+    "site_brand": "📊 DataForge BI",
     "site_logo": None,
     "login_logo": None,
     "site_icon": None,
-    "welcome_sign": "🌟 Welcome to Sotifibre - Business Intelligence Platform",
-    "copyright": "Sotifibre Analytics 2026 | v1.0.0",    
+    "welcome_sign": "🌟 Welcome to DataForge BI - Open Source Business Intelligence Platform",
+    "copyright": "DataForge BI 2026 | Open Source",    
     
     # ========================================================================
     # TOP MENU LINKS
@@ -29,7 +29,7 @@ JAZZMIN_SETTINGS = {
         {"name": "📑 Reports", "url": "/admin/visualizations/report/", "new_window": False},
         {"name": "📚 API Docs", "url": "/api/schema/swagger-ui/", "new_window": True},
         {"name": "📖 ReDoc", "url": "/api/schema/redoc/", "new_window": True},
-        {"name": "📧 Support", "url": "mailto:support@sotifibre.com", "new_window": True},
+            {"name": "📧 Support", "url": "mailto:courseco06@gmail.com", "new_window": True},
     ],
     
     # ========================================================================
@@ -39,7 +39,7 @@ JAZZMIN_SETTINGS = {
         {"model": "users.user"},
         {"name": "🔐 My Profile", "url": "/admin/users/user/", "icon": "fas fa-user-circle"},
         {"name": "⚙️ Account Settings", "url": "/admin/account/", "icon": "fas fa-cog"},
-        {"name": "📄 Documentation", "url": "https://docs.sotifibre.com", "new_window": True},
+            {"name": "📄 Documentation", "url": "https://github.com/pdha811/dataforge-bi", "new_window": True},
     ],
     
     # ========================================================================

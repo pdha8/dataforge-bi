@@ -4,7 +4,7 @@ import api from '@/api/axios'
 import {
   FolderOpen, Search, RefreshCcw, Trash2, Eye,
   Play, X, ChevronDown, Upload, FileText, CheckCircle2,
-  AlertTriangle, Clock, Edit2,
+  AlertTriangle, Clock, Pencil,
 } from 'lucide-vue-next'
 
 // ── Types ──────────────────────────────────────────────────
@@ -384,7 +384,7 @@ onMounted(fetchFiles)
               <Eye :size="13" />
             </button>
             <button class="act-btn" title="Modifier" @click="openEditDrawer(file)">
-              <Edit2 :size="13" />
+              <Pencil :size="13" />
             </button>
             <button
               class="act-btn act-btn--run"

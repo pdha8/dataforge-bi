@@ -95,7 +95,7 @@ run_playwright() {
 
   cd "$TESTS_DIR"
   if FRONTEND_URL="$FRONTEND_URL" \
-     TEST_USER_EMAIL="admin@sotifibre.dz" \
+     TEST_USER_EMAIL="admin@dataforge.tech" \
      TEST_USER_PASSWORD="SOTIFibre@2026!" \
      npx playwright test --config=playwright.config.ts; then
     echo -e "\n${GREEN}✓ Tous les tests E2E ont réussi${NC}"

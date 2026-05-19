@@ -76,6 +76,14 @@
   --z-modal:    400;
   --z-toast:    500;
   --z-tooltip:  600;
+
+  /* Shadows — composed values, tinted toward base navy */
+  --shadow-sm:     0 1px 3px oklch(0% 0 0 / 0.25);
+  --shadow-md:     0 4px 16px oklch(5% 0.01 258 / 0.3);
+  --shadow-lg:     0 8px 32px oklch(5% 0.01 258 / 0.4);
+  --shadow-xl:     0 20px 60px oklch(0% 0 0 / 0.5);
+  --shadow-accent: 0 4px 16px oklch(76% 0.14 62 / 0.28);
+  --shadow-focus:  0 0 0 3px oklch(76% 0.14 62 / 0.12);
 }
 
 /* ─── Reset ──────────────────────────────────────────────── */
@@ -101,6 +109,7 @@ body {
   font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
 }
 
 /* ─── Accessibility ──────────────────────────────────────── */
@@ -147,4 +156,51 @@ body {
 .slide-down-enter-from {
   opacity: 0;
   transform: translateY(-8px);
+}
+
+/* ─── Mobile table scroll ────────────────────────────────── */
+/* On mobile, any element directly containing a <table> gets horizontal scroll.
+   Targets table parents regardless of class name via :has() (Chrome 105+, Safari 15.4+, Firefox 121+). */
+@media (max-width: 768px) {
+  :has(> table) {
+    overflow-x: auto;
+    overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+  }
+  table {
+    min-width: max-content;
+  }
+}
+
+/* ─── Mobile drawers full-width ─────────────────────────── */
+/* Drawers are defined in scoped styles across 8+ views with widths 440-480px.
+   On phones, !important overrides the scoped rule to take full viewport width. */
+@media (max-width: 600px) {
+  .drawer {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+
+/* ─── Mobile form rows stack ────────────────────────────── */
+/* Form rows in 2-3 columns become single column on mobile.
+   !important overrides scoped CSS. Covers .form-row-2/3, .wh-form-row-2, .detail-meta-grid. */
+@media (max-width: 768px) {
+  .form-row-2,
+  .form-row-3,
+  .wh-form-row-2,
+  .detail-meta-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ─── Reduced motion ─────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  html { scroll-behavior: auto !important; }
 }

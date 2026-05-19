@@ -2,10 +2,18 @@
 IOTShield Platform URLs - Ultra Professional
 """
 from django.contrib import admin
+from django.http import JsonResponse
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.views.generic.base import RedirectView
 from rest_framework import permissions
+
+
+def health_check(_request):
+    """Endpoint léger pour Render health-check. N'exécute aucune requête DB."""
+    return JsonResponse({"status": "ok", "service": "dataforge-api"})
+
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
@@ -25,7 +33,7 @@ schema_view_yasg = get_schema_view(
         title="Sotifibre BI Platform API",
         default_version='v1',
         description="Plateforme d'analyse de données et Business Intelligence avancée.",
-        contact=openapi.Contact(email="sotifibre@sotetel.tn"),
+        contact=openapi.Contact(email="courseco06@gmail.com"),
         license=openapi.License(name="Proprietary"),
     ),
     public=True,
@@ -33,6 +41,13 @@ schema_view_yasg = get_schema_view(
 )
 
 urlpatterns = [
+    # Health-check pour Render (avant le SSL redirect → réponse 200 immédiate)
+    path('api/health/', health_check, name='health-check'),
+    path('health/', health_check),
+
+    # Racine : redirige vers /admin/ pour éviter le 404 sur "GET /"
+    path('', RedirectView.as_view(url='/admin/', permanent=False)),
+
     # Administration
     path('admin/', admin.site.urls),
 

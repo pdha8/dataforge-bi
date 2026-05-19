@@ -134,7 +134,7 @@ const PERMISSIONS: Permission[] = [
 
 // ── Settings state ─────────────────────────────────────────
 const settings = ref({
-  platformName:   'Integrated BI — Sotifibre',
+  platformName:   'DataForge BI',
   language:       'fr',
   timezone:       'Africa/Algiers',
   dataRetention:  365,
@@ -144,7 +144,7 @@ const settings = ref({
   require2fa:     false,
   passwordStrength:'strong',
   emailAlerts:    true,
-  smtpHost:       'smtp.sotifibre.com',
+  smtpHost:       'smtp.dataforge.tech',
   smtpPort:       '587',
   kpiAlertPct:    15,
 })
@@ -1641,7 +1641,7 @@ onMounted(() => { fetchUsers(); fetchActivities(); fetchTeams(); fetchUserStats(
                 <Mail :size="13" class="lbl-icon" />
                 Adresse email <span class="req">*</span>
               </label>
-              <input id="f-email" v-model="form.email" class="form-input" type="email" placeholder="prenom.nom@sotifibre.com" required />
+              <input id="f-email" v-model="form.email" class="form-input" type="email" placeholder="prenom.nom@dataforge.tech" required />
             </div>
 
             <div v-if="!editUser" class="form-field">
@@ -1763,12 +1763,12 @@ onMounted(() => { fetchUsers(); fetchActivities(); fetchTeams(); fetchUserStats(
   border: none; border-radius: var(--radius-md);
   cursor: pointer; font-family: var(--font-ui);
   font-size: var(--text-sm); font-weight: 600;
-  min-height: 38px; white-space: nowrap;
+  min-height: 40px; white-space: nowrap;
   transition: background 150ms, box-shadow 150ms;
 }
 .btn-primary:hover:not(:disabled) {
   background: oklch(80% 0.14 62);
-  box-shadow: 0 4px 16px oklch(76% 0.14 62 / 0.28);
+  box-shadow: var(--shadow-accent);
 }
 .btn-primary:disabled { opacity: 0.65; cursor: not-allowed; }
 .btn-primary--loading { min-width: 120px; justify-content: center; }
@@ -1779,7 +1779,7 @@ onMounted(() => { fetchUsers(); fetchActivities(); fetchTeams(); fetchUserStats(
   background: none; border: 1px solid var(--border-default);
   border-radius: var(--radius-md); cursor: pointer;
   font-family: var(--font-ui); font-size: var(--text-sm); font-weight: 500;
-  color: var(--text-secondary); min-height: 38px;
+  color: var(--text-secondary); min-height: 40px;
   transition: border-color 150ms, color 150ms;
 }
 .btn-ghost:hover { border-color: var(--border-strong); color: var(--text-primary); }
@@ -1828,7 +1828,7 @@ onMounted(() => { fetchUsers(); fetchActivities(); fetchTeams(); fetchUserStats(
 .search-wrap { position: relative; flex: 1; max-width: 360px; }
 .search-icon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; }
 .search-input {
-  width: 100%; height: 38px; padding: 0 var(--sp-4) 0 34px;
+  width: 100%; height: 40px; padding: 0 var(--sp-4) 0 34px;
   background: var(--surface-raised); border: 1px solid var(--border-default);
   border-radius: var(--radius-md); color: var(--text-primary);
   font-family: var(--font-ui); font-size: var(--text-sm); outline: none;
@@ -1839,7 +1839,7 @@ onMounted(() => { fetchUsers(); fetchActivities(); fetchTeams(); fetchUserStats(
 
 .select-wrap { position: relative; }
 .filter-select {
-  appearance: none; height: 38px; padding: 0 30px 0 var(--sp-3);
+  appearance: none; height: 40px; padding: 0 30px 0 var(--sp-3);
   background: var(--surface-raised); border: 1px solid var(--border-default);
   border-radius: var(--radius-md); color: var(--text-secondary);
   font-family: var(--font-ui); font-size: var(--text-sm); outline: none; cursor: pointer;
@@ -1966,7 +1966,7 @@ onMounted(() => { fetchUsers(); fetchActivities(); fetchTeams(); fetchUserStats(
 
 .role-card-hd { display: flex; align-items: flex-start; gap: var(--sp-3); }
 .role-icon-wrap {
-  width: 38px; height: 38px; border-radius: var(--radius-md); flex-shrink: 0;
+  width: 40px; height: 40px; border-radius: var(--radius-md); flex-shrink: 0;
   background: color-mix(in oklch, var(--rc) 14%, oklch(10% 0.013 258));
   color: var(--rc);
   display: flex; align-items: center; justify-content: center;
@@ -2041,16 +2041,16 @@ onMounted(() => { fetchUsers(); fetchActivities(); fetchTeams(); fetchUserStats(
 .sf-hint  { font-size: var(--text-xs); color: var(--text-muted); line-height: 1.4; }
 
 .sf-input {
-  height: 38px; padding: 0 var(--sp-3);
+  height: 40px; padding: 0 var(--sp-3);
   background: var(--surface-overlay);
   border: 1px solid var(--border-default); border-radius: var(--radius-md);
   color: var(--text-primary); font-family: var(--font-ui); font-size: var(--text-sm); outline: none;
   transition: border-color 150ms;
 }
-.sf-input:focus { border-color: var(--accent-dim); box-shadow: 0 0 0 3px oklch(76% 0.14 62 / 0.12); }
+.sf-input:focus { border-color: var(--accent-dim); box-shadow: var(--shadow-focus); }
 
 .sf-select {
-  appearance: none; width: 100%; height: 38px; padding: 0 30px 0 var(--sp-3);
+  appearance: none; width: 100%; height: 40px; padding: 0 30px 0 var(--sp-3);
   background: var(--surface-overlay); border: 1px solid var(--border-default);
   border-radius: var(--radius-md); color: var(--text-primary);
   font-family: var(--font-ui); font-size: var(--text-sm); outline: none; cursor: pointer;
@@ -2209,7 +2209,7 @@ onMounted(() => { fetchUsers(); fetchActivities(); fetchTeams(); fetchUserStats(
   font-family: var(--font-ui); font-size: var(--text-sm); outline: none;
   transition: border-color 150ms;
 }
-.form-input:focus { border-color: var(--accent-dim); box-shadow: 0 0 0 3px oklch(76% 0.14 62 / 0.12); }
+.form-input:focus { border-color: var(--accent-dim); box-shadow: var(--shadow-focus); }
 .form-input::placeholder { color: var(--text-muted); }
 
 /* Role picker in drawer */
@@ -2407,7 +2407,7 @@ onMounted(() => { fetchUsers(); fetchActivities(); fetchTeams(); fetchUserStats(
 .system-card:hover {
   background: var(--surface-raised);
   border-color: var(--accent-dim);
-  box-shadow: 0 2px 8px var(--shadow-xs);
+  box-shadow: var(--shadow-sm);
 }
 
 .system-card-icon {
@@ -2447,6 +2447,11 @@ onMounted(() => { fetchUsers(); fetchActivities(); fetchTeams(); fetchUserStats(
   .admin-page { padding: var(--sp-4); }
   .roles-grid { grid-template-columns: 1fr; }
   .uth:nth-child(4), .utd:nth-child(4) { display: none; }
+}
+
+@media (max-width: 480px) {
+  .stat-cell { min-width: 100%; }
+  .stats-strip { gap: var(--sp-2); }
 }
 
 @media (prefers-reduced-motion: reduce) {

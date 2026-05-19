@@ -80,7 +80,7 @@ async function handleSubmit() {
         <div class="logo">
           <span class="logo-mark">IBI</span>
           <span class="logo-sep"></span>
-          <span class="logo-label">Integrated BI</span>
+          <span class="logo-label">DataForge BI</span>
         </div>
 
         <!-- Heading -->
@@ -179,7 +179,7 @@ async function handleSubmit() {
         </form>
 
         <!-- Footer -->
-        <p class="panel-footer">&copy; 2026 Sotifibre — Tous droits réservés</p>
+        <p class="panel-footer">&copy; 2026 DataForge BI — Open Source</p>
       </div>
     </section>
 
@@ -406,7 +406,7 @@ async function handleSubmit() {
 
 .field-input:focus {
   border-color: var(--accent-dim);
-  box-shadow: 0 0 0 3px oklch(76% 0.14 62 / 0.15);
+  box-shadow: var(--shadow-focus);
 }
 
 .field--error .field-input {

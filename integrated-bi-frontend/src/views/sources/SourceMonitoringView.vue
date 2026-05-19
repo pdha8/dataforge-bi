@@ -734,7 +734,7 @@ onUnmounted(() => {
   font-size: var(--text-sm);
   font-weight: 500;
   color: var(--text-secondary);
-  min-height: 38px;
+  min-height: 40px;
   transition: border-color 150ms, color 150ms;
 }
 
@@ -746,8 +746,8 @@ onUnmounted(() => {
 .btn-icon {
   padding: var(--sp-2);
   min-height: unset;
-  width: 38px;
-  height: 38px;
+  width: 40px;
+  height: 40px;
   justify-content: center;
 }
 
@@ -839,7 +839,7 @@ onUnmounted(() => {
 }
 
 .filter-select {
-  height: 38px;
+  height: 40px;
   padding: 0 var(--sp-4);
   background: var(--surface-raised);
   border: 1px solid var(--border-default);
@@ -871,7 +871,7 @@ onUnmounted(() => {
 
 .search-input {
   width: 100%;
-  height: 38px;
+  height: 40px;
   padding: 0 var(--sp-4) 0 34px;
   background: var(--surface-raised);
   border: 1px solid var(--border-default);
@@ -896,7 +896,7 @@ onUnmounted(() => {
 }
 
 .date-input {
-  height: 38px;
+  height: 40px;
   padding: 0 var(--sp-3);
   background: var(--surface-raised);
   border: 1px solid var(--border-default);
@@ -1115,7 +1115,7 @@ onUnmounted(() => {
 
 .btn-create-query:hover {
   background: oklch(80% 0.14 62);
-  box-shadow: 0 4px 16px oklch(76% 0.14 62 / 0.28);
+  box-shadow: var(--shadow-accent);
 }
 
 .expand-code {

@@ -1003,12 +1003,12 @@ onMounted(() => { fetchKpis(); fetchPickerData() })
   border: none; border-radius: var(--radius-md);
   cursor: pointer; font-family: var(--font-ui);
   font-size: var(--text-sm); font-weight: 600;
-  min-height: 38px; white-space: nowrap;
+  min-height: 40px; white-space: nowrap;
   transition: background 150ms, box-shadow 150ms;
 }
 .btn-primary:hover:not(:disabled) {
   background: oklch(80% 0.14 62);
-  box-shadow: 0 4px 16px oklch(76% 0.14 62 / 0.28);
+  box-shadow: var(--shadow-accent);
 }
 .btn-primary:disabled { opacity: 0.65; cursor: not-allowed; }
 .btn-primary--loading { min-width: 80px; justify-content: center; }
@@ -1019,12 +1019,12 @@ onMounted(() => { fetchKpis(); fetchPickerData() })
   background: none; border: 1px solid var(--border-default);
   border-radius: var(--radius-md); cursor: pointer;
   font-family: var(--font-ui); font-size: var(--text-sm); font-weight: 500;
-  color: var(--text-secondary); min-height: 38px;
+  color: var(--text-secondary); min-height: 40px;
   transition: border-color 150ms, color 150ms;
 }
 .btn-ghost:hover { border-color: var(--border-strong); color: var(--text-primary); }
 
-.btn-icon { padding: var(--sp-2); min-height: unset; width: 38px; height: 38px; justify-content: center; }
+.btn-icon { padding: var(--sp-2); min-height: unset; width: 40px; height: 40px; justify-content: center; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .btn-icon--spin svg { animation: spin 0.7s linear infinite; }
 
@@ -1101,7 +1101,7 @@ onMounted(() => { fetchKpis(); fetchPickerData() })
   transform: translateY(-50%); color: var(--text-muted); pointer-events: none;
 }
 .search-input {
-  width: 100%; height: 38px; padding: 0 var(--sp-4) 0 34px;
+  width: 100%; height: 40px; padding: 0 var(--sp-4) 0 34px;
   background: var(--surface-raised); border: 1px solid var(--border-default);
   border-radius: var(--radius-md); color: var(--text-primary);
   font-family: var(--font-ui); font-size: var(--text-sm); outline: none;
@@ -1112,7 +1112,7 @@ onMounted(() => { fetchKpis(); fetchPickerData() })
 
 .select-wrap { position: relative; }
 .filter-select {
-  appearance: none; height: 38px; padding: 0 30px 0 var(--sp-3);
+  appearance: none; height: 40px; padding: 0 30px 0 var(--sp-3);
   background: var(--surface-raised); border: 1px solid var(--border-default);
   border-radius: var(--radius-md); color: var(--text-secondary);
   font-family: var(--font-ui); font-size: var(--text-sm); outline: none; cursor: pointer;
@@ -1484,7 +1484,7 @@ onMounted(() => { fetchKpis(); fetchPickerData() })
   color: var(--text-primary); font-family: var(--font-ui); font-size: var(--text-sm); outline: none;
   transition: border-color 150ms;
 }
-.form-input:focus { border-color: var(--accent-dim); box-shadow: 0 0 0 3px oklch(76% 0.14 62 / 0.12); }
+.form-input:focus { border-color: var(--accent-dim); box-shadow: var(--shadow-focus); }
 .form-input::placeholder { color: var(--text-muted); }
 
 .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 80px; gap: var(--sp-3); align-items: end; }

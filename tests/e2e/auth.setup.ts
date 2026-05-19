@@ -1,10 +1,10 @@
-import { test as setup } from '@playwright/test'
+﻿import { test as setup } from '@playwright/test'
 import path from 'path'
 
 const authFile = path.join(__dirname, '.auth/user.json')
 
-const EMAIL    = process.env.TEST_USER_EMAIL    ?? 'admin@sotifibre.dz'
-const PASSWORD = process.env.TEST_USER_PASSWORD ?? 'SOTIFibre@2026!'
+const EMAIL    = process.env.TEST_USER_EMAIL    ?? 'admin@dataforge.tech'
+const PASSWORD = process.env.TEST_USER_PASSWORD ?? 'DataForge@2026!'
 
 setup('authenticate once', async ({ page }) => {
   await page.goto('/login')

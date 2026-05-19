@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-SOTIFibre BI Platform — Enrichissement métier pour PFE
+DataForge BI Platform — Enrichissement métier pour DataForge
 =====================================================
 
 Ajoute des données métier réalistes au-dessus du seed standard :
@@ -28,7 +28,7 @@ from apps.visualizations.models import Dashboard, KPI, Report
 User = get_user_model()
 
 # ─── Admin réutilisé ────────────────────────────────────────
-admin = User.objects.filter(email='admin@sotifibre.dz').first() or User.objects.filter(is_superuser=True).first()
+admin = User.objects.filter(email='admin@dataforge.tech').first() or User.objects.filter(is_superuser=True).first()
 if not admin:
     print("⚠️  Aucun admin trouvé — exécute d'abord le seed standard.")
     sys.exit(0)
@@ -163,7 +163,7 @@ print(f"✅ {DataQuery.objects.count()} requêtes SQL métier")
 
 # ─── 3. KPIs avec cibles et seuils ──────────────────────────
 KPIS = [
-    ('CA mensuel SOTIFibre',             'currency', 1_000_000_000, 900_000_000, 700_000_000, 'DZD'),
+    ('CA mensuel DataForge',             'currency', 1_000_000_000, 900_000_000, 700_000_000, 'DZD'),
     ('Marge brute',                       'percentage', 35.0, 30.0, 25.0, '%'),
     ('Taux de churn',                     'percentage', 2.0, 3.0, 5.0, '%'),  # cibles inversées
     ('NPS (satisfaction client)',         'number', 65, 50, 30, ''),
@@ -182,8 +182,7 @@ for name, kpi_type, target, warn, crit, unit in KPIS:
             'warning_threshold': warn,
             'critical_threshold': crit,
             'unit': unit,
-            'owner': admin,
-            'description': f"KPI {name} — objectif PFE Sotifibre 2026.",
+            'description': f"KPI {name} — objectif DataForge Sotifibre 2026.",
         },
     )
 print(f"✅ {KPI.objects.count()} KPIs avec cibles & seuils")
@@ -220,7 +219,7 @@ Report.objects.get_or_create(
         'dashboard': dsb_ventes,
         'format': 'html',
         'schedule': '0 8 * * 1',  # tous les lundis à 8h
-        'recipients': ['direction@sotifibre.dz', 'commercial@sotifibre.dz', 'pdg@sotifibre.dz'],
+        'recipients': ['direction@dataforge.tech', 'commercial@dataforge.tech', 'pdg@dataforge.tech'],
         'include_metadata': True,
         'include_filters': True,
         'owner': admin,

@@ -580,9 +580,12 @@ class QueryService:
             }
         
         # Exécuter la requête
+        # NB: DataQuery.parameters est typé default=list côté modèle — on retombe
+        # sur un dict vide si ce n'est pas un mapping, sinon le ** unpack lèverait TypeError.
+        stored_params = self.query.parameters if isinstance(self.query.parameters, dict) else {}
         result = self.data_source_service.execute_query(
             self.query.query_text,
-            {**self.query.parameters, **(params or {})}
+            {**stored_params, **(params or {})}
         )
         
         # Mettre à jour les statistiques

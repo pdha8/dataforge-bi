@@ -116,7 +116,7 @@ DATABASES = {
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        'LOCATION': 'sotifibre-cache',
+        'LOCATION': 'dataforge-cache',
     },
 }
 
@@ -247,7 +247,7 @@ EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
 EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', True)
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
-DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@sotifibre.com')
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@dataforge.tech')
 
 # Anymail pour les services email avancés (SendGrid, Mailgun, etc.)
 ANYMAIL = {
@@ -308,8 +308,8 @@ CELERY_BEAT_SCHEDULE = {
 
 # ─── API Docs ─────────────────────────────────────────────────────────────────
 SPECTACULAR_SETTINGS = {
-    "TITLE": "SOTIFibre Platform API",
-    "DESCRIPTION": "IOT Sécurité Platform",
+    "TITLE": "DataForge API",
+    "DESCRIPTION": "Open Source Business Intelligence Platform",
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
     "COMPONENT_SPLIT_REQUEST": True,
@@ -376,10 +376,10 @@ FRONTEND_URL = env("FRONTEND_URL", default="http://localhost:3000")
 BACKEND_URL = env("BACKEND_URL", default="http://localhost:8000")
 
 # ─── Site Information ─────────────────────────────────────────────────────────
-SITE_NAME = "Sotifibre Platform"
-SITE_DESCRIPTION = "Plateforme de sécurité pour appareils IoT"
-CONTACT_EMAIL = env("CONTACT_EMAIL", default="contact@iotshield.tn")
-SUPPORT_EMAIL = env("SUPPORT_EMAIL", default="support@iotshield.tn")
+SITE_NAME = "DataForge BI"
+SITE_DESCRIPTION = "Plateforme BI open source"
+CONTACT_EMAIL = env("CONTACT_EMAIL", default="courseco06@gmail.com")
+SUPPORT_EMAIL = env("SUPPORT_EMAIL", default="courseco06@gmail.com")
 
 
 # ─── Grok AI ─────────────────────────────────────────────────────────

@@ -1,0 +1,72 @@
+# DataForge BI — Backend Django
+# Production requirements (Render deploy)
+# Versions alignées avec pyproject.toml
+
+# ─── Production server & DB ─────────────────────────────────────────────
+gunicorn>=23.0.0
+dj-database-url>=2.3.0
+psycopg2-binary>=2.9.11
+whitenoise>=6.12.0
+
+# ─── Django core ────────────────────────────────────────────────────────
+asgiref>=3.11.1
+django>=6.0.3
+django-anymail>=14.0
+django-celery-beat>=2.9.0
+django-celery-results>=2.6.0
+django-cors-headers>=4.9.0
+django-environ>=0.13.0
+django-extensions>=4.1
+django-filter>=25.2
+django-import-export>=4.4.0
+django-jazzmin>=3.0.4
+django-redis>=6.0.0
+djangorestframework>=3.17.0
+djangorestframework-simplejwt>=5.5.1
+drf-spectacular>=0.29.0
+drf-yasg>=1.21.15
+
+# ─── Async / Queues ─────────────────────────────────────────────────────
+celery>=5.6.2
+channels>=4.3.2
+channels-redis>=4.3.0
+croniter>=6.2.2
+kafka-python>=2.3.0
+redis>=7.3.0
+
+# ─── Data & ML ──────────────────────────────────────────────────────────
+joblib>=1.5.3
+numpy>=2.4.3
+pandas>=3.0.1
+prophet>=1.3.0
+scikit-learn>=1.8.0
+scipy>=1.17.1
+statsmodels>=0.14.6
+xgboost>=3.2.0
+
+# ─── Storage & I/O ──────────────────────────────────────────────────────
+boto3>=1.42.73
+pillow>=12.1.1
+sqlalchemy>=2.0.48
+weasyprint>=68.1
+
+# ─── Integrations (email/sms/chat) ──────────────────────────────────────
+sendgrid>=6.12.5
+slack-sdk>=3.41.0
+twilio>=9.10.3
+pymsteams>=0.2.5
+python-telegram-bot>=22.7
+
+# ─── DB connectors ──────────────────────────────────────────────────────
+pymongo>=4.16.0
+snowflake-connector-python>=4.3.0
+
+# ─── HTTP & utils ───────────────────────────────────────────────────────
+httpx>=0.28.1
+paramiko>=4.0.0
+python-crontab>=3.3.0
+python-dateutil>=2.9.0.post0
+python-decouple>=3.8
+requests>=2.32.5
+urllib3>=2.6.3
+websockets>=16.0

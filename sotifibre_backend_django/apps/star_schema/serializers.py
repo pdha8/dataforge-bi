@@ -102,16 +102,17 @@ class DimensionalSchemaDetailSerializer(DimensionalSchemaSerializer):
 
 class DimensionalSchemaCreateSerializer(serializers.ModelSerializer):
     """Sérialiseur pour création de DimensionalSchema"""
-    
+
     class Meta:
         model = DimensionalSchema
         fields = [
-            'name', 'description', 'schema_type', 'fact_tables', 'dimension_tables',
+            'id', 'name', 'description', 'schema_type', 'fact_tables', 'dimension_tables',
             'relationships', 'dimension_mapping', 'measures', 'measure_config',
             'calculations', 'default_filters', 'grain', 'default_join_type',
             'tags', 'category', 'business_domain', 'documentation_url',
             'owner', 'team', 'is_cached', 'cache_ttl_seconds'
         ]
+        read_only_fields = ['id']
     
     def create(self, validated_data):
         validated_data['created_by'] = self.context['request'].user

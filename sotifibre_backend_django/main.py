@@ -1,5 +1,5 @@
 def main():
-    print("Hello from sotifibre-backend-django!")
+    print("Hello from dataforge-backend!")
 
 
 if __name__ == "__main__":

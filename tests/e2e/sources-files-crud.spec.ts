@@ -1,17 +1,17 @@
-/**
- * Tests E2E exhaustifs — Page /sources/files
- * CRUD complet : upload, edit, delete + contrôles de format et de validation
+﻿/**
+ * Tests E2E exhaustifs â€” Page /sources/files
+ * CRUD complet : upload, edit, delete + contrÃ´les de format et de validation
  */
 import { test, expect, Page } from '@playwright/test'
 import path from 'path'
 import os from 'os'
 import fs from 'fs'
 
-const EMAIL    = process.env.TEST_USER_EMAIL    ?? 'admin@sotifibre.dz'
-const PASSWORD = process.env.TEST_USER_PASSWORD ?? 'SOTIFibre@2026!'
+const EMAIL    = process.env.TEST_USER_EMAIL    ?? 'admin@dataforge.tech'
+const PASSWORD = process.env.TEST_USER_PASSWORD ?? 'DataForge@2026!'
 const TS       = Date.now()
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 async function login(page: Page) {
   await page.goto('/login')
@@ -26,7 +26,7 @@ async function goToFiles(page: Page) {
   await page.waitForLoadState('networkidle')
 }
 
-/** Crée un fichier temporaire CSV et retourne son chemin */
+/** CrÃ©e un fichier temporaire CSV et retourne son chemin */
 function makeTempCsv(filename: string, content?: string): string {
   const dir  = os.tmpdir()
   const fpath = path.join(dir, filename)
@@ -35,7 +35,7 @@ function makeTempCsv(filename: string, content?: string): string {
   return fpath
 }
 
-/** Crée un fichier JSON temporaire */
+/** CrÃ©e un fichier JSON temporaire */
 function makeTempJson(filename: string): string {
   const dir   = os.tmpdir()
   const fpath = path.join(dir, filename)
@@ -44,15 +44,15 @@ function makeTempJson(filename: string): string {
   return fpath
 }
 
-// ─── Suite 1 : Chargement ────────────────────────────────────────────────────
+// â”€â”€â”€ Suite 1 : Chargement â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-test.describe('/sources/files – Chargement', () => {
+test.describe('/sources/files â€“ Chargement', () => {
   test.beforeEach(async ({ page }) => {
     await login(page)
     await goToFiles(page)
   })
 
-  test('GET /api/data-sources/files/ → 200 avec liste valide', async ({ page }) => {
+  test('GET /api/data-sources/files/ â†’ 200 avec liste valide', async ({ page }) => {
     const responses: number[] = []
     page.on('response', r => {
       if (/\/api\/data-sources\/files\/(\?|$)/.test(r.url()) && r.request().method() === 'GET')
@@ -72,7 +72,7 @@ test.describe('/sources/files – Chargement', () => {
       expect(text).toMatch(/format/i)
       expect(text).toMatch(/statut/i)
     } else {
-      // Pas de fichiers — vérifier l'état vide ou la page elle-même
+      // Pas de fichiers â€” vÃ©rifier l'Ã©tat vide ou la page elle-mÃªme
       await expect(page.locator('.files-page').first()).toBeVisible({ timeout: 8_000 })
     }
   })
@@ -88,9 +88,9 @@ test.describe('/sources/files – Chargement', () => {
   })
 })
 
-// ─── Suite 2 : Drawer CREATE ────────────────────────────────────────────────
+// â”€â”€â”€ Suite 2 : Drawer CREATE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-test.describe('/sources/files – Drawer import', () => {
+test.describe('/sources/files â€“ Drawer import', () => {
   test.beforeEach(async ({ page }) => {
     await login(page)
     await goToFiles(page)
@@ -101,13 +101,13 @@ test.describe('/sources/files – Drawer import', () => {
     const drawer = page.locator('[role="dialog"]')
     await expect(drawer).toBeVisible()
 
-    // Champ fichier (input[type=file] peut être non-visible pour Playwright → toBeAttached)
+    // Champ fichier (input[type=file] peut Ãªtre non-visible pour Playwright â†’ toBeAttached)
     await expect(page.locator('#f-file')).toBeAttached({ timeout: 8_000 })
 
     // Champ nom
     await expect(page.locator('#f-fname')).toBeVisible()
 
-    // Champ format — doit être un <select> natif
+    // Champ format â€” doit Ãªtre un <select> natif
     const ftype = page.locator('#f-ftype')
     await expect(ftype).toBeVisible()
     const tag = await ftype.evaluate((el: HTMLSelectElement) => el.tagName.toLowerCase())
@@ -131,14 +131,14 @@ test.describe('/sources/files – Drawer import', () => {
     expect(values).toContain('json')
     expect(values).toContain('tsv')
     expect(values).toContain('html')
-    // Anciens formats supprimés
+    // Anciens formats supprimÃ©s
     expect(values).not.toContain('excel')
     expect(values).not.toContain('parquet')
     expect(values).not.toContain('xml')
     expect(values).not.toContain('txt')
   })
 
-  test('Le bouton Importer est désactivé sans fichier sélectionné', async ({ page }) => {
+  test('Le bouton Importer est dÃ©sactivÃ© sans fichier sÃ©lectionnÃ©', async ({ page }) => {
     await page.locator('button', { hasText: /Importer/i }).first().click()
     await page.locator('[role="dialog"]').waitFor({ state: 'visible' })
 
@@ -147,17 +147,17 @@ test.describe('/sources/files – Drawer import', () => {
   })
 })
 
-// ─── Suite 3 : UPLOAD (CREATE) ──────────────────────────────────────────────
+// â”€â”€â”€ Suite 3 : UPLOAD (CREATE) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-test.describe('/sources/files – UPLOAD', () => {
+test.describe('/sources/files â€“ UPLOAD', () => {
   test.beforeEach(async ({ page }) => {
     await login(page)
     await goToFiles(page)
   })
 
-  test('UPLOAD CSV : POST /api/data-sources/files/ → 201 avec nom correct', async ({ page }) => {
+  test('UPLOAD CSV : POST /api/data-sources/files/ â†’ 201 avec nom correct', async ({ page }) => {
     const csvPath  = makeTempCsv(`inventaire_reseau_${TS}.csv`)
-    const fileName = `Inventaire Réseau ${TS}`
+    const fileName = `Inventaire RÃ©seau ${TS}`
 
     await page.locator('button', { hasText: /Importer/i }).first().click()
     await page.locator('[role="dialog"]').waitFor({ state: 'visible' })
@@ -179,7 +179,7 @@ test.describe('/sources/files – UPLOAD', () => {
     expect(body.name ?? body.data?.name ?? body.original_name).toBeTruthy()
   })
 
-  test('UPLOAD CSV : le fichier apparaît dans la liste après upload', async ({ page }) => {
+  test('UPLOAD CSV : le fichier apparaÃ®t dans la liste aprÃ¨s upload', async ({ page }) => {
     const csvPath  = makeTempCsv(`logs_serveur_mai2026_${TS}.csv`)
     const fileName = `Logs Serveur ${TS}`
 
@@ -201,9 +201,9 @@ test.describe('/sources/files – UPLOAD', () => {
     await expect(page.locator(`text=${fileName}`).first()).toBeVisible({ timeout: 8_000 })
   })
 
-  test('UPLOAD JSON : POST → 201 + format JSON affiché dans la liste', async ({ page }) => {
+  test('UPLOAD JSON : POST â†’ 201 + format JSON affichÃ© dans la liste', async ({ page }) => {
     const jsonPath = makeTempJson(`rapport_qualite_fibre_${TS}.json`)
-    const fileName = `Rapport Qualité Fibre ${TS}`
+    const fileName = `Rapport QualitÃ© Fibre ${TS}`
 
     await page.locator('button', { hasText: /Importer/i }).first().click()
     await page.locator('[role="dialog"]').waitFor({ state: 'visible' })
@@ -225,28 +225,28 @@ test.describe('/sources/files – UPLOAD', () => {
     await expect(page.locator(`text=${fileName}`).first()).toBeVisible({ timeout: 8_000 })
   })
 
-  test('La sélection d\'un fichier .csv auto-sélectionne le format CSV', async ({ page }) => {
+  test('La sÃ©lection d\'un fichier .csv auto-sÃ©lectionne le format CSV', async ({ page }) => {
     const csvPath = makeTempCsv(`auto_detect_${TS}.csv`)
 
     await page.locator('button', { hasText: /Importer/i }).first().click()
     await page.locator('[role="dialog"]').waitFor({ state: 'visible' })
 
     await page.locator('#f-file').setInputFiles(csvPath)
-    // Après sélection, le format doit être auto-détecté
+    // AprÃ¨s sÃ©lection, le format doit Ãªtre auto-dÃ©tectÃ©
     const selectedVal = await page.locator('#f-ftype').inputValue()
     expect(selectedVal).toBe('csv')
   })
 })
 
-// ─── Suite 4 : EDIT ─────────────────────────────────────────────────────────
+// â”€â”€â”€ Suite 4 : EDIT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-test.describe('/sources/files – EDIT', () => {
+test.describe('/sources/files â€“ EDIT', () => {
   test.beforeEach(async ({ page }) => {
     await login(page)
     await goToFiles(page)
   })
 
-  test('Le bouton crayon ouvre le drawer en mode édition avec le nom pré-rempli', async ({ page }) => {
+  test('Le bouton crayon ouvre le drawer en mode Ã©dition avec le nom prÃ©-rempli', async ({ page }) => {
     // S'assurer qu'il y a au moins un fichier
     const hasRows = await page.locator('.table-row').count()
     if (hasRows === 0) {
@@ -264,15 +264,15 @@ test.describe('/sources/files – EDIT', () => {
     // Le drawer doit afficher "Modifier le fichier"
     await expect(drawer.locator('.drawer-title')).toContainText(/Modifier/i)
 
-    // Le champ nom doit être pré-rempli
+    // Le champ nom doit Ãªtre prÃ©-rempli
     const nameVal = await page.locator('#f-fname').inputValue()
     expect(nameVal.trim().length).toBeGreaterThan(0)
 
-    // En mode édition, le champ fichier n'est pas présent
+    // En mode Ã©dition, le champ fichier n'est pas prÃ©sent
     await expect(page.locator('#f-file')).not.toBeVisible()
   })
 
-  test('EDIT : PATCH /api/data-sources/files/{id}/ → 200 avec nouveau nom', async ({ page }) => {
+  test('EDIT : PATCH /api/data-sources/files/{id}/ â†’ 200 avec nouveau nom', async ({ page }) => {
     const hasRows = await page.locator('.table-row').count()
     if (hasRows === 0) {
       test.skip()
@@ -283,7 +283,7 @@ test.describe('/sources/files – EDIT', () => {
     await expect(editBtn).toBeVisible({ timeout: 8_000 })
     await editBtn.click()
 
-    const newName = `Modifié E2E ${TS}`
+    const newName = `ModifiÃ© E2E ${TS}`
     await page.locator('#f-fname').fill(newName)
 
     const [res] = await Promise.all([
@@ -300,16 +300,16 @@ test.describe('/sources/files – EDIT', () => {
   })
 })
 
-// ─── Suite 5 : DELETE ────────────────────────────────────────────────────────
+// â”€â”€â”€ Suite 5 : DELETE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-test.describe('/sources/files – DELETE', () => {
+test.describe('/sources/files â€“ DELETE', () => {
   test.beforeEach(async ({ page }) => {
     await login(page)
     await goToFiles(page)
   })
 
-  test('DELETE : suppression d\'un fichier créé via l\'UI → 204 + disparition', async ({ page }) => {
-    // 1. Uploader un fichier dédié au test de suppression
+  test('DELETE : suppression d\'un fichier crÃ©Ã© via l\'UI â†’ 204 + disparition', async ({ page }) => {
+    // 1. Uploader un fichier dÃ©diÃ© au test de suppression
     const csvPath  = makeTempCsv(`del_test_${TS}.csv`)
     const fileName = `DEL E2E ${TS}`
 
@@ -348,20 +348,20 @@ test.describe('/sources/files – DELETE', () => {
   })
 })
 
-// ─── Suite 6 : PROCESS + PREVIEW ─────────────────────────────────────────────
+// â”€â”€â”€ Suite 6 : PROCESS + PREVIEW â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-test.describe('/sources/files – PROCESS & PREVIEW', () => {
+test.describe('/sources/files â€“ PROCESS & PREVIEW', () => {
   test.beforeEach(async ({ page }) => {
     await login(page)
     await goToFiles(page)
   })
 
-  test('PROCESS : clic sur "Traiter" déclenche POST /process/ → met à jour le statut', async ({ page }) => {
+  test('PROCESS : clic sur "Traiter" dÃ©clenche POST /process/ â†’ met Ã  jour le statut', async ({ page }) => {
     const csvPath  = makeTempCsv(
       `mesures_qualite_${TS}.csv`,
       `timestamp,site,signal_dbm,debit_mbps\n2026-05-01 08:00,Alger-Centre,-72,850\n2026-05-01 08:05,Oran-Ouest,-65,920\n`
     )
-    const fileName = `Mesures Qualité ${TS}`
+    const fileName = `Mesures QualitÃ© ${TS}`
 
     // Upload
     await page.locator('button', { hasText: /Importer/i }).first().click()
@@ -393,7 +393,7 @@ test.describe('/sources/files – PROCESS & PREVIEW', () => {
     expect(processRes.status()).toBe(200)
     await page.waitForLoadState('networkidle')
 
-    // Le statut devrait maintenant être "Traité"
-    await expect(row.locator('.status-chip')).toContainText(/traité/i, { timeout: 8_000 })
+    // Le statut devrait maintenant Ãªtre "TraitÃ©"
+    await expect(row.locator('.status-chip')).toContainText(/traitÃ©/i, { timeout: 8_000 })
   })
 })

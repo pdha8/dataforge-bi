@@ -125,11 +125,11 @@ def custom_exception_handler(exc, context):
 # ========================================================================
 
 class SotifibreException(Exception):
-    """Exception de base pour Sotifibre"""
+    """Exception de base pour DataForge"""
     
-    def __init__(self, message="Une erreur Sotifibre est survenue", code=None, status_code=400):
+    def __init__(self, message="Une erreur DataForge est survenue", code=None, status_code=400):
         self.message = message
-        self.code = code or "sotifibre_error"
+        self.code = code or "dataforge_error"
         self.status_code = status_code
         super().__init__(self.message)
 

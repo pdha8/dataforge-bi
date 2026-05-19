@@ -1095,12 +1095,12 @@ onMounted(fetchDashboards)
   border: none; border-radius: var(--radius-md);
   cursor: pointer; font-family: var(--font-ui);
   font-size: var(--text-sm); font-weight: 600;
-  min-height: 38px; white-space: nowrap;
+  min-height: 40px; white-space: nowrap;
   transition: background 150ms, box-shadow 150ms;
 }
 .btn-primary:hover:not(:disabled) {
   background: oklch(80% 0.14 62);
-  box-shadow: 0 4px 16px oklch(76% 0.14 62 / 0.28);
+  box-shadow: var(--shadow-accent);
 }
 .btn-primary:disabled { opacity: 0.65; cursor: not-allowed; }
 .btn-primary--loading { min-width: 90px; justify-content: center; }
@@ -1112,7 +1112,7 @@ onMounted(fetchDashboards)
   border-radius: var(--radius-md); cursor: pointer;
   font-family: var(--font-ui); font-size: var(--text-sm);
   font-weight: 500; color: var(--text-secondary);
-  min-height: 38px;
+  min-height: 40px;
   transition: border-color 150ms, color 150ms;
 }
 .btn-ghost:hover { border-color: var(--border-strong); color: var(--text-primary); }
@@ -1157,7 +1157,7 @@ onMounted(fetchDashboards)
 }
 
 .search-input {
-  width: 100%; height: 38px;
+  width: 100%; height: 40px;
   padding: 0 var(--sp-4) 0 34px;
   background: var(--surface-raised);
   border: 1px solid var(--border-default);
@@ -1171,7 +1171,7 @@ onMounted(fetchDashboards)
 
 .select-wrap { position: relative; }
 .filter-select {
-  appearance: none; height: 38px;
+  appearance: none; height: 40px;
   padding: 0 30px 0 var(--sp-3);
   background: var(--surface-raised);
   border: 1px solid var(--border-default);
@@ -1565,7 +1565,7 @@ onMounted(fetchDashboards)
   font-size: var(--text-sm); outline: none;
   transition: border-color 150ms;
 }
-.form-input:focus { border-color: var(--accent-dim); box-shadow: 0 0 0 3px oklch(76% 0.14 62 / 0.12); }
+.form-input:focus { border-color: var(--accent-dim); box-shadow: var(--shadow-focus); }
 .form-input::placeholder { color: var(--text-muted); }
 
 .form-textarea { height: auto; padding: var(--sp-3) var(--sp-4); resize: none; line-height: 1.55; }
@@ -1792,7 +1792,7 @@ onMounted(fetchDashboards)
   font-family: var(--font-ui);
   font-size: var(--text-sm);
   font-weight: 500;
-  min-height: 38px;
+  min-height: 40px;
   white-space: nowrap;
   cursor: pointer;
   transition: border-color 150ms, color 150ms, background 150ms;

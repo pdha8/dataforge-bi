@@ -13,7 +13,7 @@ BASE = "http://127.0.0.1:8000"
 
 # --- 1. Authentification ---
 def get_token():
-    data = json.dumps({"email": "admin@sotifibre.dz", "password": "SOTIFibre@2026!"}).encode()
+    data = json.dumps({"email": "admin@dataforge.tech", "password": "DataForge@2026!"}).encode()
     req = urllib.request.Request(f"{BASE}/api/auth/jwt/token/", data=data,
                                   headers={"Content-Type": "application/json"}, method="POST")
     with urllib.request.urlopen(req, timeout=10) as r:

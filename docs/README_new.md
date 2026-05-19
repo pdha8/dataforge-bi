@@ -1,6 +1,6 @@
-# Integrated BI Platform — Sotifibre
+# DataForge BI Platform
 
-> **Projet de Fin d'Études (PFE) — 2026**  
+> **Open Source Business Intelligence Platform**  
 > Plateforme de Business Intelligence full-stack pour l'analyse de données d'entreprise
 
 ---
@@ -32,7 +32,7 @@
 
 ## Description
 
-**Integrated BI** est une plateforme de Business Intelligence full-stack conçue pour centraliser, transformer et visualiser les données métier de SOTIFibre. Elle couvre l'ensemble du cycle de vie de la donnée : ingestion, transformation ETL, modélisation dimensionnelle, visualisation, alertes et rapports automatisés.
+**DataForge BI** est une plateforme de Business Intelligence full-stack open source conçue pour centraliser, transformer et visualiser les données métier.
 
 ---
 
@@ -76,15 +76,15 @@
 | Serveur | Ubuntu 22.04 LTS |
 | IP Backend | 192.168.224.128:8000 |
 | Gestionnaire de paquets | uv (Python) + npm (Node) |
-| Admin Django | Jazzmin (thème personnalisé SOTIFibre) |
+| Admin Django | Jazzmin (thème personnalisé DataForge BI) |
 
 ---
 
 ## Architecture
 
 ```
-Integrated_BI/
-├── sotifibre_backend_django/    # API Django
+dataforge-bi/
+├── dataforge_backend/    # API Django
 │   ├── apps/
 │   │   ├── core/               # Config système, permissions, pagination
 │   │   ├── users/              # Utilisateurs, rôles, équipes
@@ -96,7 +96,7 @@ Integrated_BI/
 │   │   ├── visualizations/     # Dashboards, KPIs, rapports, widgets
 │   │   └── notifications/      # Alertes, canaux, abonnements
 │   └── config/                 # Settings, URLs, WSGI
-├── integrated-bi-frontend/     # SPA Vue 3
+├── dataforge_frontend/     # SPA Vue 3
 │   └── src/
 │       ├── views/              # 22 pages complètes
 │       ├── stores/             # Pinia (auth)
@@ -186,7 +186,7 @@ Integrated_BI/
 
 ### Backend
 ```bash
-cd sotifibre_backend_django
+cd dataforge_backend
 uv sync
 uv run python manage.py migrate
 uv run python manage.py runserver 0.0.0.0:8000
@@ -194,7 +194,7 @@ uv run python manage.py runserver 0.0.0.0:8000
 
 ### Frontend
 ```bash
-cd integrated-bi-frontend
+cd dataforge_frontend
 npm install
 npm run dev
 ```
@@ -234,4 +234,4 @@ npx playwright test
 
 ---
 
-*Réalisé dans le cadre du PFE — Abdoulaye Adoum, 2026*
+*DataForge BI — Open Source — Djafar Ahmat Mahamat Moussa, 2026*

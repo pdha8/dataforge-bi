@@ -1,9 +1,10 @@
 # apps/core/admin.py
 """
-Core Admin - Configuration de la plateforme Sotifibre BI
+Core Admin - Configuration de la plateforme DataForge BI
 """
 from django.contrib import admin
 from django.utils.html import format_html
+from django.utils.safestring import mark_safe
 from django.contrib import messages
 from import_export.admin import ImportExportModelAdmin
 from import_export import resources, fields
@@ -17,7 +18,7 @@ from .models import Config
 # ============================================================================
 
 class ConfigResource(resources.ModelResource):
-    """Resource pour l'import/export des configurations Sotifibre"""
+    """Resource pour l'import/export des configurations DataForge"""
     
     class Meta:
         model = Config
@@ -32,7 +33,7 @@ class ConfigResource(resources.ModelResource):
 @admin.register(Config)
 class ConfigAdmin(ImportExportModelAdmin):
     """
-    Administration des configurations globales Sotifibre BI
+    Administration des configurations globales DataForge BI
     """
     resource_class = ConfigResource
     
@@ -116,7 +117,7 @@ class ConfigAdmin(ImportExportModelAdmin):
     key_display.admin_order_field = 'key'
     
     def config_type_badge(self, obj):
-        """Badge pour le type de configuration avec couleurs adaptées à Sotifibre"""
+        """Badge pour le type de configuration avec couleurs adaptées à DataForge"""
         colors = {
             # Types BI
             'general': 'secondary',
@@ -187,8 +188,8 @@ class ConfigAdmin(ImportExportModelAdmin):
     def encrypted_indicator(self, obj):
         """Indicateur de chiffrement"""
         if obj.is_encrypted:
-            return format_html('<span class="badge bg-warning" title="Donnée chiffrée">🔒 Chiffré</span>')
-        return format_html('<span class="badge bg-success" title="Donnée en clair">🔓 Clair</span>')
+            return mark_safe('<span class="badge bg-warning" title="Donnée chiffrée">🔒 Chiffré</span>')
+        return mark_safe('<span class="badge bg-success" title="Donnée en clair">🔓 Clair</span>')
     encrypted_indicator.short_description = 'Sécurité'
     
     def value_formatted(self, obj):
@@ -314,7 +315,7 @@ class ConfigAdmin(ImportExportModelAdmin):
             json.dumps(data, indent=2, default=str, ensure_ascii=False),
             content_type='application/json; charset=utf-8'
         )
-        response['Content-Disposition'] = 'attachment; filename="sotifibre_configurations.json"'
+        response['Content-Disposition'] = 'attachment; filename="dataforge_configurations.json"'
         return response
     export_selected.short_description = "📤 Exporter la sélection BI"
     
@@ -408,7 +409,7 @@ class ConfigAdmin(ImportExportModelAdmin):
 
 class CoreDashboard:
     """
-    Statistiques pour le dashboard core Sotifibre
+    Statistiques pour le dashboard core DataForge
     """
     
     @staticmethod
@@ -455,6 +456,6 @@ class CoreDashboard:
 
 
 # Configuration de l'interface d'administration
-admin.site.site_header = "Sotifibre BI - Administration"
-admin.site.site_title = "Sotifibre Admin"
-admin.site.index_title = "📊 Tableau de bord Sotifibre BI"
+admin.site.site_header = "DataForge BI - Administration"
+admin.site.site_title = "DataForge Admin"
+admin.site.index_title = "📊 Tableau de bord DataForge BI"

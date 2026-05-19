@@ -1,14 +1,37 @@
 <script setup lang="ts">
+import { watch } from 'vue'
+import { useRoute } from 'vue-router'
 import AppSidebar from '@/components/sidebar/AppSidebar.vue'
 import AppHeader from '@/components/header/AppHeader.vue'
 import { useSidebar } from '@/composables/useSidebar'
 
-const { collapsed } = useSidebar()
+const { collapsed, mobileOpen, closeMobile } = useSidebar()
+const route = useRoute()
+
+watch(() => route.path, () => {
+  if (mobileOpen.value) closeMobile()
+})
 </script>
 
 <template>
-  <div class="app-shell" :class="{ 'app-shell--collapsed': collapsed }">
+  <div
+    class="app-shell"
+    :class="{
+      'app-shell--collapsed': collapsed,
+      'app-shell--mobile-open': mobileOpen,
+    }"
+  >
     <AppSidebar />
+
+    <Transition name="backdrop-fade">
+      <div
+        v-if="mobileOpen"
+        class="mobile-backdrop"
+        aria-hidden="true"
+        @click="closeMobile"
+      ></div>
+    </Transition>
+
     <div class="app-right">
       <AppHeader />
       <main class="app-content">
@@ -70,8 +93,33 @@ const { collapsed } = useSidebar()
   transform: translateY(-4px);
 }
 
+/* Mobile backdrop — only visible when drawer is open on small screens */
+.mobile-backdrop {
+  display: none;
+}
+
 @media (max-width: 768px) {
-  .app-shell { grid-template-columns: 0 1fr; }
-  .app-shell--collapsed { grid-template-columns: 0 1fr; }
+  /* Sidebar is position: fixed on mobile (out of grid flow), so the grid
+     becomes single-column to let .app-right take the full viewport width. */
+  .app-shell,
+  .app-shell--collapsed {
+    grid-template-columns: 1fr;
+  }
+
+  .mobile-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: oklch(0% 0 0 / 0.5);
+    z-index: calc(var(--z-modal) - 1);
+  }
+  .backdrop-fade-enter-active,
+  .backdrop-fade-leave-active {
+    transition: opacity 220ms ease;
+  }
+  .backdrop-fade-enter-from,
+  .backdrop-fade-leave-to {
+    opacity: 0;
+  }
 }
 </style>

@@ -1,20 +1,20 @@
-/**
- * E2E – Module Data Warehouse + Star Schema + ML Analytics
+﻿/**
+ * E2E â€“ Module Data Warehouse + Star Schema + ML Analytics
  *
  * Cibles : /warehouse  /star-schema  /ml-analytics
  *
  * Objectifs :
- *   • /warehouse : 4 onglets (Explorer, Tables de faits, Agrégations, Monitoring)
- *     + boutons "Rafraîchir / Analyser / Optimiser" qui appellent la vraie API
- *   • /star-schema : 5 onglets (Schémas, Galaxies, Calculs, Hiérarchies, Relations),
- *     CRUD schémas, boutons "Charger le SQL / Valider / Exécuter le schéma"
- *   • /ml-analytics : déclenchement du /train et présence des métriques
+ *   â€¢ /warehouse : 4 onglets (Explorer, Tables de faits, AgrÃ©gations, Monitoring)
+ *     + boutons "RafraÃ®chir / Analyser / Optimiser" qui appellent la vraie API
+ *   â€¢ /star-schema : 5 onglets (SchÃ©mas, Galaxies, Calculs, HiÃ©rarchies, Relations),
+ *     CRUD schÃ©mas, boutons "Charger le SQL / Valider / ExÃ©cuter le schÃ©ma"
+ *   â€¢ /ml-analytics : dÃ©clenchement du /train et prÃ©sence des mÃ©triques
  */
 
 import { test, expect, Page } from '@playwright/test'
 
-const EMAIL    = process.env.TEST_USER_EMAIL    ?? 'admin@sotifibre.dz'
-const PASSWORD = process.env.TEST_USER_PASSWORD ?? 'SOTIFibre@2026!'
+const EMAIL    = process.env.TEST_USER_EMAIL    ?? 'admin@dataforge.tech'
+const PASSWORD = process.env.TEST_USER_PASSWORD ?? 'DataForge@2026!'
 const TS       = Date.now()
 
 async function login(page: Page) {
@@ -30,11 +30,11 @@ async function goto(page: Page, path: string) {
   await page.waitForLoadState('networkidle').catch(() => {})
 }
 
-// ════════════════════════════════════════════════════════════
-//   1. /warehouse — chargement + tabs + actions
-// ════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//   1. /warehouse â€” chargement + tabs + actions
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
-test.describe('/warehouse – Chargement & onglets', () => {
+test.describe('/warehouse â€“ Chargement & onglets', () => {
   test.beforeEach(async ({ page }) => {
     await login(page)
     await goto(page, '/warehouse')
@@ -52,7 +52,7 @@ test.describe('/warehouse – Chargement & onglets', () => {
     expect(errors, errors.join('\n')).toHaveLength(0)
   })
 
-  test('GET /api/data-warehouse/schemas/ → 200', async ({ page }) => {
+  test('GET /api/data-warehouse/schemas/ â†’ 200', async ({ page }) => {
     const statuses: number[] = []
     page.on('response', r => {
       if (/\/api\/data-warehouse\/schemas\/(\?|$)/.test(r.url()) && r.request().method() === 'GET') {
@@ -65,14 +65,14 @@ test.describe('/warehouse – Chargement & onglets', () => {
     expect(statuses[0]).toBe(200)
   })
 
-  test('Les 4 onglets Explorer / Tables de faits / Agrégations / Monitoring sont visibles', async ({ page }) => {
-    for (const label of ['Explorer', 'Tables de faits', 'Agrégations', 'Monitoring']) {
+  test('Les 4 onglets Explorer / Tables de faits / AgrÃ©gations / Monitoring sont visibles', async ({ page }) => {
+    for (const label of ['Explorer', 'Tables de faits', 'AgrÃ©gations', 'Monitoring']) {
       const tab = page.locator('button, [role="tab"]', { hasText: new RegExp(label, 'i') }).first()
       await expect(tab, `Onglet manquant : ${label}`).toBeVisible({ timeout: 5_000 })
     }
   })
 
-  test('Onglet Tables de faits : GET /api/data-warehouse/fact-tables/ → 200', async ({ page }) => {
+  test('Onglet Tables de faits : GET /api/data-warehouse/fact-tables/ â†’ 200', async ({ page }) => {
     const tab = page.locator('button, [role="tab"]', { hasText: /Tables de faits/i }).first()
     const [res] = await Promise.all([
       page.waitForResponse(
@@ -85,7 +85,7 @@ test.describe('/warehouse – Chargement & onglets', () => {
     expect(res.status()).toBe(200)
   })
 
-  test('Onglet Monitoring : déclenche un GET sur l\'API monitoring', async ({ page }) => {
+  test('Onglet Monitoring : dÃ©clenche un GET sur l\'API monitoring', async ({ page }) => {
     const tab = page.locator('button, [role="tab"]', { hasText: /^Monitoring$/i }).first()
     if (!(await tab.isVisible({ timeout: 4_000 }).catch(() => false))) { test.skip(); return }
     const responses: string[] = []
@@ -96,22 +96,22 @@ test.describe('/warehouse – Chargement & onglets', () => {
     })
     await tab.click()
     await page.waitForTimeout(1500)
-    // au moins un appel API a été déclenché lors du switch
+    // au moins un appel API a Ã©tÃ© dÃ©clenchÃ© lors du switch
     expect(responses.length).toBeGreaterThan(0)
   })
 })
 
-// ════════════════════════════════════════════════════════════
-//   2. /star-schema — 5 onglets + CRUD schéma + boutons SQL
-// ════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//   2. /star-schema â€” 5 onglets + CRUD schÃ©ma + boutons SQL
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
-test.describe('/star-schema – Schémas, Galaxies, Calculs, Hiérarchies, Relations', () => {
+test.describe('/star-schema â€“ SchÃ©mas, Galaxies, Calculs, HiÃ©rarchies, Relations', () => {
   test.beforeEach(async ({ page }) => {
     await login(page)
     await goto(page, '/star-schema')
   })
 
-  test('GET /api/star-schema/dimensional-schemas/ → 200', async ({ page }) => {
+  test('GET /api/star-schema/dimensional-schemas/ â†’ 200', async ({ page }) => {
     const statuses: number[] = []
     page.on('response', r => {
       if (/\/api\/star-schema\/dimensional-schemas\/(\?|$)/.test(r.url()) && r.request().method() === 'GET') {
@@ -124,14 +124,14 @@ test.describe('/star-schema – Schémas, Galaxies, Calculs, Hiérarchies, Relat
     expect(statuses[0]).toBe(200)
   })
 
-  test('Les 5 onglets Schémas / Galaxies / Calculs / Hiérarchies / Relations sont présents', async ({ page }) => {
-    for (const label of ['Schémas', 'Galaxies', 'Calculs', 'Hiérarchies', 'Relations']) {
+  test('Les 5 onglets SchÃ©mas / Galaxies / Calculs / HiÃ©rarchies / Relations sont prÃ©sents', async ({ page }) => {
+    for (const label of ['SchÃ©mas', 'Galaxies', 'Calculs', 'HiÃ©rarchies', 'Relations']) {
       const tab = page.locator('button, [role="tab"]', { hasText: new RegExp(label, 'i') }).first()
       await expect(tab, `Onglet manquant : ${label}`).toBeVisible({ timeout: 5_000 })
     }
   })
 
-  test('Switcher l\'onglet Galaxies déclenche GET /api/star-schema/galaxies/', async ({ page }) => {
+  test('Switcher l\'onglet Galaxies dÃ©clenche GET /api/star-schema/galaxies/', async ({ page }) => {
     const tab = page.locator('button, [role="tab"]', { hasText: /^Galaxies$/i }).first()
     if (!(await tab.isVisible({ timeout: 4_000 }).catch(() => false))) { test.skip(); return }
     const [res] = await Promise.all([
@@ -145,16 +145,16 @@ test.describe('/star-schema – Schémas, Galaxies, Calculs, Hiérarchies, Relat
     expect(res.status()).toBe(200)
   })
 
-  test('Bouton "Nouveau schéma" ouvre un drawer/modal de création', async ({ page }) => {
-    const btn = page.locator('button', { hasText: /Nouveau schéma|Créer un schéma/i }).first()
+  test('Bouton "Nouveau schÃ©ma" ouvre un drawer/modal de crÃ©ation', async ({ page }) => {
+    const btn = page.locator('button', { hasText: /Nouveau schÃ©ma|CrÃ©er un schÃ©ma/i }).first()
     if (!(await btn.isVisible({ timeout: 4_000 }).catch(() => false))) { test.skip(); return }
     await btn.click()
     const drawer = page.locator('[role="dialog"], .drawer, aside.drawer, .modal').first()
     await expect(drawer).toBeVisible({ timeout: 5_000 })
   })
 
-  test('Les boutons "Valider le schéma" et "Exécuter le schéma" appellent les vrais endpoints', async ({ page }) => {
-    // L'utilisateur doit sélectionner un schéma d'abord
+  test('Les boutons "Valider le schÃ©ma" et "ExÃ©cuter le schÃ©ma" appellent les vrais endpoints', async ({ page }) => {
+    // L'utilisateur doit sÃ©lectionner un schÃ©ma d'abord
     const firstSchemaRow = page.locator('.schema-card, .schema-row, tr, [class*="schema"]').first()
     if (!(await firstSchemaRow.isVisible({ timeout: 5_000 }).catch(() => false))) { test.skip(); return }
 
@@ -169,26 +169,26 @@ test.describe('/star-schema – Schémas, Galaxies, Calculs, Hiérarchies, Relat
         ).catch(() => null),
         inlineValidate.click(),
       ])
-      // 200/201 = success ; 400/422 = validation rejected (encore une réponse valide) ;
-      // 405 toléré si le backend tourne sur une version pré-fix qui n'accepte que GET — le code
-      // dans views.py est désormais `methods=['get', 'post']`, le redémarrage du serveur Django
-      // appliquera le fix définitivement.
+      // 200/201 = success ; 400/422 = validation rejected (encore une rÃ©ponse valide) ;
+      // 405 tolÃ©rÃ© si le backend tourne sur une version prÃ©-fix qui n'accepte que GET â€” le code
+      // dans views.py est dÃ©sormais `methods=['get', 'post']`, le redÃ©marrage du serveur Django
+      // appliquera le fix dÃ©finitivement.
       if (res) expect([200, 201, 400, 405, 422]).toContain(res.status())
     }
   })
 })
 
-// ════════════════════════════════════════════════════════════
-//   3. /ml-analytics — Entraînement modèle + métriques
-// ════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//   3. /ml-analytics â€” EntraÃ®nement modÃ¨le + mÃ©triques
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
-test.describe('/ml-analytics – CRUD modèles + entraînement', () => {
+test.describe('/ml-analytics â€“ CRUD modÃ¨les + entraÃ®nement', () => {
   test.beforeEach(async ({ page }) => {
     await login(page)
     await goto(page, '/ml-analytics')
   })
 
-  test('GET /api/ml-analytics/models/ → 200', async ({ page }) => {
+  test('GET /api/ml-analytics/models/ â†’ 200', async ({ page }) => {
     const statuses: number[] = []
     page.on('response', r => {
       if (/\/api\/ml-analytics\/models\/(\?|$)/.test(r.url()) && r.request().method() === 'GET') {
@@ -201,8 +201,8 @@ test.describe('/ml-analytics – CRUD modèles + entraînement', () => {
     expect(statuses[0]).toBe(200)
   })
 
-  test('Le bouton "Entraîner" déclenche POST /api/ml-analytics/models/{id}/train/', async ({ page }) => {
-    const trainBtn = page.locator('button[title*="Entraîner" i], .act-btn--train').first()
+  test('Le bouton "EntraÃ®ner" dÃ©clenche POST /api/ml-analytics/models/{id}/train/', async ({ page }) => {
+    const trainBtn = page.locator('button[title*="EntraÃ®ner" i], .act-btn--train').first()
     if (!(await trainBtn.isVisible({ timeout: 4_000 }).catch(() => false))) { test.skip(); return }
     const [res] = await Promise.all([
       page.waitForResponse(
@@ -213,7 +213,7 @@ test.describe('/ml-analytics – CRUD modèles + entraînement', () => {
       trainBtn.click(),
     ])
     if (!res) { test.skip(); return }
-    // L'entraînement peut prendre du temps en arrière-plan → 200/202/201 sont OK
+    // L'entraÃ®nement peut prendre du temps en arriÃ¨re-plan â†’ 200/202/201 sont OK
     expect([200, 201, 202, 400, 422, 500]).toContain(res.status())
   })
 
@@ -226,7 +226,7 @@ test.describe('/ml-analytics – CRUD modèles + entraînement', () => {
     })
     await page.reload()
     await page.waitForLoadState('networkidle').catch(() => {})
-    // Note : l'entraînement ML peut renvoyer 500 si pas de données. On filtre.
+    // Note : l'entraÃ®nement ML peut renvoyer 500 si pas de donnÃ©es. On filtre.
     const blocking = errors.filter(e => !/train\//.test(e))
     expect(blocking, blocking.join('\n')).toHaveLength(0)
   })

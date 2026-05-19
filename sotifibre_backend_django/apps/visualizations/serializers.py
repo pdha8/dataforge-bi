@@ -160,6 +160,18 @@ class KPISerializer(serializers.ModelSerializer):
     def get_status_icon(self, obj):
         return obj.get_status_icon()
 
+    def validate_formula(self, value):
+        return value if value is not None else ""
+
+    def validate_format_string(self, value):
+        return value if value is not None else ""
+
+    def validate_unit(self, value):
+        return value if value is not None else ""
+
+    def validate_trend_direction(self, value):
+        return value if value is not None else ""
+
 
 class ReportSerializer(serializers.ModelSerializer):
     """Sérialiseur pour Report"""

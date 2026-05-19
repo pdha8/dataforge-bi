@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHashHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
 import { useAuthStore, type UserRole } from '@/stores/auth'
 
@@ -65,7 +65,9 @@ const routes: RouteRecordRaw[] = [
 ]
 
 const router = createRouter({
-  history: createWebHistory(),
+  // ⚠️ Mode hash : URLs deviennent /#/dashboard au lieu de /dashboard.
+  // Bulletproof contre F5/refresh sur Render (le serveur ne voit plus que /).
+  history: createWebHashHistory(),
   routes,
 })
 

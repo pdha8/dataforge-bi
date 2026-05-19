@@ -1,0 +1,10 @@
+# Force LF on shell scripts (Render/Linux refuse CRLF)
+*.sh text eol=lf
+build.sh text eol=lf
+
+# Python source : LF cross-platform
+*.py text eol=lf
+
+# Render config
+*.yaml text eol=lf
+*.yml text eol=lf

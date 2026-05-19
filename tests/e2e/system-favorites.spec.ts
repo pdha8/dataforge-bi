@@ -1,21 +1,21 @@
-/**
- * E2E – Système : Favoris, Notifications, Admin, Profil, Sidebar/Topbar
+﻿/**
+ * E2E â€“ SystÃ¨me : Favoris, Notifications, Admin, Profil, Sidebar/Topbar
  *
  * Cibles : /favorites  /notifications  /admin  /profile  + sidebar/topbar
  *
  * Objectifs :
- *   • Bouton ⭐ sur Rapports / Visualisations / KPIs, apparition dans /favorites
- *   • Notifications : 4 sous-onglets (Notifications, Règles d'alerte, Canaux, Abonnements)
- *   • Admin : 7 sous-onglets (Utilisateurs, Rôles, Équipes, Paramètres,
- *     Journal d'audit, Activités viz., Système)
- *   • Profil : champs Nom / Email visibles, formulaire de mot de passe
- *   • Sidebar : tous les liens visibles, pas de 404
+ *   â€¢ Bouton â­ sur Rapports / Visualisations / KPIs, apparition dans /favorites
+ *   â€¢ Notifications : 4 sous-onglets (Notifications, RÃ¨gles d'alerte, Canaux, Abonnements)
+ *   â€¢ Admin : 7 sous-onglets (Utilisateurs, RÃ´les, Ã‰quipes, ParamÃ¨tres,
+ *     Journal d'audit, ActivitÃ©s viz., SystÃ¨me)
+ *   â€¢ Profil : champs Nom / Email visibles, formulaire de mot de passe
+ *   â€¢ Sidebar : tous les liens visibles, pas de 404
  */
 
 import { test, expect, Page } from '@playwright/test'
 
-const EMAIL    = process.env.TEST_USER_EMAIL    ?? 'admin@sotifibre.dz'
-const PASSWORD = process.env.TEST_USER_PASSWORD ?? 'SOTIFibre@2026!'
+const EMAIL    = process.env.TEST_USER_EMAIL    ?? 'admin@dataforge.tech'
+const PASSWORD = process.env.TEST_USER_PASSWORD ?? 'DataForge@2026!'
 
 async function login(page: Page) {
   await page.goto('/login')
@@ -30,14 +30,14 @@ async function goto(page: Page, path: string) {
   await page.waitForLoadState('networkidle').catch(() => {})
 }
 
-// ════════════════════════════════════════════════════════════
-//   1. /favorites – Page liste
-// ════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//   1. /favorites â€“ Page liste
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
-test.describe('/favorites – Liste des favoris', () => {
+test.describe('/favorites â€“ Liste des favoris', () => {
   test.beforeEach(async ({ page }) => { await login(page) })
 
-  test('GET /api/visualizations/favorites/ → 200', async ({ page }) => {
+  test('GET /api/visualizations/favorites/ â†’ 200', async ({ page }) => {
     const statuses: number[] = []
     page.on('response', r => {
       if (/\/api\/visualizations\/favorites\/(\?|$)/.test(r.url()) && r.request().method() === 'GET') {
@@ -50,11 +50,11 @@ test.describe('/favorites – Liste des favoris', () => {
   })
 })
 
-// ════════════════════════════════════════════════════════════
-//   2. Bouton ⭐ Favoris sur Rapports / Visualisations / KPIs
-// ════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//   2. Bouton â­ Favoris sur Rapports / Visualisations / KPIs
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
-test.describe('Bouton ⭐ Favoris sur les pages clés', () => {
+test.describe('Bouton â­ Favoris sur les pages clÃ©s', () => {
   test.beforeEach(async ({ page }) => { await login(page) })
 
   test('/kpis affiche un bouton "Ajouter aux favoris" sur chaque KPI', async ({ page }) => {
@@ -62,7 +62,7 @@ test.describe('Bouton ⭐ Favoris sur les pages clés', () => {
     const cards = page.locator('.kpi-card, .kpi-row, .card')
     if ((await cards.count()) === 0) { test.skip(); return }
     const starBtn = page.locator('button.act-btn--star, button[title*="favoris" i]').first()
-    await expect(starBtn, 'Aucun bouton Étoile sur la page /kpis').toBeVisible({ timeout: 5_000 })
+    await expect(starBtn, 'Aucun bouton Ã‰toile sur la page /kpis').toBeVisible({ timeout: 5_000 })
   })
 
   test('/reports affiche un bouton "Ajouter aux favoris" sur chaque rapport', async ({ page }) => {
@@ -70,7 +70,7 @@ test.describe('Bouton ⭐ Favoris sur les pages clés', () => {
     const cards = page.locator('.rp-card, .report-row, .card')
     if ((await cards.count()) === 0) { test.skip(); return }
     const starBtn = page.locator('button.action-btn--star, button[title*="favoris" i]').first()
-    await expect(starBtn, 'Aucun bouton Étoile sur la page /reports').toBeVisible({ timeout: 5_000 })
+    await expect(starBtn, 'Aucun bouton Ã‰toile sur la page /reports').toBeVisible({ timeout: 5_000 })
   })
 
   test('/visualizations affiche un bouton "Ajouter aux favoris" sur chaque viz', async ({ page }) => {
@@ -78,10 +78,10 @@ test.describe('Bouton ⭐ Favoris sur les pages clés', () => {
     const cards = page.locator('.viz-card, .visualization-row, .card')
     if ((await cards.count()) === 0) { test.skip(); return }
     const starBtn = page.locator('button.card-btn--star, button[title*="favoris" i]').first()
-    await expect(starBtn, 'Aucun bouton Étoile sur la page /visualizations').toBeVisible({ timeout: 5_000 })
+    await expect(starBtn, 'Aucun bouton Ã‰toile sur la page /visualizations').toBeVisible({ timeout: 5_000 })
   })
 
-  test('Clic sur ⭐ d\'un KPI déclenche POST /api/visualizations/favorites/add/', async ({ page }) => {
+  test('Clic sur â­ d\'un KPI dÃ©clenche POST /api/visualizations/favorites/add/', async ({ page }) => {
     await goto(page, '/kpis')
     const starBtn = page.locator('button.act-btn--star').first()
     if (!(await starBtn.isVisible({ timeout: 4_000 }).catch(() => false))) { test.skip(); return }
@@ -98,11 +98,11 @@ test.describe('Bouton ⭐ Favoris sur les pages clés', () => {
   })
 })
 
-// ════════════════════════════════════════════════════════════
-//   3. /notifications – 4 onglets
-// ════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//   3. /notifications â€“ 4 onglets
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
-test.describe('/notifications – Onglets et chargements', () => {
+test.describe('/notifications â€“ Onglets et chargements', () => {
   test.beforeEach(async ({ page }) => { await login(page) })
 
   test('Chargement OK et aucune 5xx', async ({ page }) => {
@@ -116,7 +116,7 @@ test.describe('/notifications – Onglets et chargements', () => {
     expect(errors, errors.join('\n')).toHaveLength(0)
   })
 
-  test('GET /api/notifications/notifications/ → 200', async ({ page }) => {
+  test('GET /api/notifications/notifications/ â†’ 200', async ({ page }) => {
     const statuses: number[] = []
     page.on('response', r => {
       if (/\/api\/notifications\/notifications\/(\?|$)/.test(r.url()) && r.request().method() === 'GET') {
@@ -128,19 +128,19 @@ test.describe('/notifications – Onglets et chargements', () => {
     expect(statuses[0]).toBe(200)
   })
 
-  test('Les 4 onglets sont visibles : Notifications / Règles d\'alerte / Canaux / Abonnements', async ({ page }) => {
+  test('Les 4 onglets sont visibles : Notifications / RÃ¨gles d\'alerte / Canaux / Abonnements', async ({ page }) => {
     await goto(page, '/notifications')
     const tabs = page.locator('button.tab-btn')
     await expect(tabs).toHaveCount(4, { timeout: 6_000 })
     const labels = await tabs.allTextContents()
     const joined = labels.join('|').toLowerCase()
     expect(joined).toMatch(/notification/)
-    expect(joined).toMatch(/r[èe]gles?\s*d[''’]alerte|alerte/)
+    expect(joined).toMatch(/r[Ã¨e]gles?\s*d[''â€™]alerte|alerte/)
     expect(joined).toMatch(/canau[xt]|channel/)
     expect(joined).toMatch(/abonnement|subscription/)
   })
 
-  test('Cliquer sur l\'onglet "Règles d\'alerte" déclenche GET /api/notifications/alerts/', async ({ page }) => {
+  test('Cliquer sur l\'onglet "RÃ¨gles d\'alerte" dÃ©clenche GET /api/notifications/alerts/', async ({ page }) => {
     await goto(page, '/notifications')
     // 2e onglet de la liste (alerts)
     const tab = page.locator('button.tab-btn').nth(1)
@@ -156,14 +156,14 @@ test.describe('/notifications – Onglets et chargements', () => {
   })
 })
 
-// ════════════════════════════════════════════════════════════
-//   4. /admin – 7 onglets
-// ════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//   4. /admin â€“ 7 onglets
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
-test.describe('/admin – Sous-onglets CRUD', () => {
+test.describe('/admin â€“ Sous-onglets CRUD', () => {
   test.beforeEach(async ({ page }) => { await login(page) })
 
-  test('GET /api/users/users/ → 200 à l\'ouverture', async ({ page }) => {
+  test('GET /api/users/users/ â†’ 200 Ã  l\'ouverture', async ({ page }) => {
     const statuses: number[] = []
     page.on('response', r => {
       if (/\/api\/users\/users\/(\?|$)/.test(r.url()) && r.request().method() === 'GET') {
@@ -171,11 +171,11 @@ test.describe('/admin – Sous-onglets CRUD', () => {
       }
     })
     await goto(page, '/admin')
-    // L'admin est protégé : on tolère un retry si la 1re réponse n'arrive pas (réseau lent)
+    // L'admin est protÃ©gÃ© : on tolÃ¨re un retry si la 1re rÃ©ponse n'arrive pas (rÃ©seau lent)
     if (statuses.length === 0) {
       await page.waitForTimeout(2000)
     }
-    expect(statuses.length, 'Aucun appel /api/users/users/ détecté').toBeGreaterThan(0)
+    expect(statuses.length, 'Aucun appel /api/users/users/ dÃ©tectÃ©').toBeGreaterThan(0)
     expect(statuses[0]).toBe(200)
   })
 
@@ -185,18 +185,18 @@ test.describe('/admin – Sous-onglets CRUD', () => {
     await expect(tabs).toHaveCount(7, { timeout: 8_000 })
     const labels = (await tabs.allTextContents()).map(s => s.trim().toLowerCase())
     expect(labels.some(l => /utilisateur/.test(l))).toBe(true)
-    expect(labels.some(l => /^rôles?\b|\brôles?\b/.test(l))).toBe(true)
-    expect(labels.some(l => /équipes?|équipe/.test(l))).toBe(true)
-    expect(labels.some(l => /paramètres?/.test(l))).toBe(true)
+    expect(labels.some(l => /^rÃ´les?\b|\brÃ´les?\b/.test(l))).toBe(true)
+    expect(labels.some(l => /Ã©quipes?|Ã©quipe/.test(l))).toBe(true)
+    expect(labels.some(l => /paramÃ¨tres?/.test(l))).toBe(true)
     expect(labels.some(l => /journal.*audit/.test(l))).toBe(true)
-    expect(labels.some(l => /activités?\s*viz/.test(l))).toBe(true)
-    expect(labels.some(l => /système/.test(l))).toBe(true)
+    expect(labels.some(l => /activitÃ©s?\s*viz/.test(l))).toBe(true)
+    expect(labels.some(l => /systÃ¨me/.test(l))).toBe(true)
   })
 
-  test('Onglet "Rôles" déclenche GET /api/users/roles/', async ({ page }) => {
+  test('Onglet "RÃ´les" dÃ©clenche GET /api/users/roles/', async ({ page }) => {
     await goto(page, '/admin')
     const tabs = page.locator('button.tab-btn[role="tab"]')
-    // ordre TABS : users, roles, teams, settings, audit, vizactivity, system → index 1
+    // ordre TABS : users, roles, teams, settings, audit, vizactivity, system â†’ index 1
     const rolesTab = tabs.nth(1)
     const [res] = await Promise.all([
       page.waitForResponse(
@@ -215,17 +215,17 @@ test.describe('/admin – Sous-onglets CRUD', () => {
     const auditTab = tabs.nth(4)  // 5e onglet
     await auditTab.click()
     await page.waitForTimeout(1200)
-    // Filtres : selects, inputs date/search, ou éléments .filter
+    // Filtres : selects, inputs date/search, ou Ã©lÃ©ments .filter
     const filters = page.locator('select, input[type="date"], input[type="search"], input[placeholder*="filtr" i], .filter, .audit-filter')
-    expect(await filters.count(), 'Aucun filtre détecté dans le Journal d\'audit').toBeGreaterThan(0)
+    expect(await filters.count(), 'Aucun filtre dÃ©tectÃ© dans le Journal d\'audit').toBeGreaterThan(0)
   })
 })
 
-// ════════════════════════════════════════════════════════════
-//   5. /profile – Champs et modification
-// ════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//   5. /profile â€“ Champs et modification
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
-test.describe('/profile – Profil utilisateur', () => {
+test.describe('/profile â€“ Profil utilisateur', () => {
   test.beforeEach(async ({ page }) => { await login(page) })
 
   test('Page profil affiche Nom, Email et formulaire mot de passe', async ({ page }) => {
@@ -233,7 +233,7 @@ test.describe('/profile – Profil utilisateur', () => {
     // Email et password input doivent exister
     const inputs = page.locator('input[type="email"], input[name="email"], input[name*="name" i]')
     expect(await inputs.count()).toBeGreaterThan(0)
-    // Présence d'un input password (changement mot de passe)
+    // PrÃ©sence d'un input password (changement mot de passe)
     const pw = page.locator('input[type="password"]')
     expect(await pw.count()).toBeGreaterThan(0)
   })
@@ -250,14 +250,14 @@ test.describe('/profile – Profil utilisateur', () => {
   })
 })
 
-// ════════════════════════════════════════════════════════════
-//   6. Sidebar – Tous les liens fonctionnent
-// ════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//   6. Sidebar â€“ Tous les liens fonctionnent
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
-test.describe('Sidebar – Aucune page blanche / 404', () => {
+test.describe('Sidebar â€“ Aucune page blanche / 404', () => {
   test.beforeEach(async ({ page }) => { await login(page) })
 
-  // 19 routes × ~3-5 s par route + flakes réseau possibles → on prend large
+  // 19 routes Ã— ~3-5 s par route + flakes rÃ©seau possibles â†’ on prend large
   test.setTimeout(180_000)
 
   test('Visiter toutes les routes principales : aucune page blanche', async ({ page }) => {
@@ -270,7 +270,7 @@ test.describe('Sidebar – Aucune page blanche / 404', () => {
       '/notifications', '/favorites', '/profile',
     ]
     const blanks: string[] = []
-    // On collecte les 5xx mais on ne les considère pas comme une rupture de page (UI gère)
+    // On collecte les 5xx mais on ne les considÃ¨re pas comme une rupture de page (UI gÃ¨re)
     const flaky5xx: string[] = []
     for (const r of routes) {
       const errs: number[] = []
@@ -286,8 +286,8 @@ test.describe('Sidebar – Aucune page blanche / 404', () => {
       page.off('response', listener)
     }
     // Seules les pages BLANCHES sont des bugs ; les 5xx ponctuels du backend distant sont
-    // signalés mais ne font pas échouer (UI doit savoir les afficher en empty-state).
-    expect(blanks, `Pages blanches détectées :\n${blanks.join('\n')}`).toHaveLength(0)
+    // signalÃ©s mais ne font pas Ã©chouer (UI doit savoir les afficher en empty-state).
+    expect(blanks, `Pages blanches dÃ©tectÃ©es :\n${blanks.join('\n')}`).toHaveLength(0)
     // eslint-disable-next-line no-console
     if (flaky5xx.length) console.warn('[INFO] 5xx ponctuels sur :', flaky5xx.join(', '))
   })

@@ -1136,13 +1136,13 @@ onMounted(() => {
   font-family: var(--font-ui);
   font-size: var(--text-sm);
   font-weight: 600;
-  min-height: 38px;
+  min-height: 40px;
   white-space: nowrap;
   transition: background-color 150ms, box-shadow 150ms;
 }
 .btn-primary:hover:not(:disabled) {
   background-color: oklch(80% 0.14 62);
-  box-shadow: 0 4px 16px oklch(76% 0.14 62 / 0.28);
+  box-shadow: var(--shadow-accent);
 }
 .btn-primary:disabled { opacity: 0.65; cursor: not-allowed; }
 .btn-primary--loading { min-width: 90px; justify-content: center; }
@@ -1160,7 +1160,7 @@ onMounted(() => {
   font-size: var(--text-sm);
   font-weight: 500;
   color: var(--text-secondary);
-  min-height: 38px;
+  min-height: 40px;
   transition: border-color 150ms, color 150ms;
 }
 .btn-ghost:hover:not(:disabled) { border-color: var(--border-strong, var(--border-default)); color: var(--text-primary); }
@@ -1180,7 +1180,7 @@ onMounted(() => {
   font-family: var(--font-ui);
   font-size: var(--text-sm);
   font-weight: 600;
-  min-height: 38px;
+  min-height: 40px;
   min-width: 100px;
   transition: opacity 150ms;
 }
@@ -1190,8 +1190,8 @@ onMounted(() => {
 .btn-icon {
   padding: var(--sp-2);
   min-height: unset;
-  width: 38px;
-  height: 38px;
+  width: 40px;
+  height: 40px;
   justify-content: center;
 }
 
@@ -1280,7 +1280,7 @@ onMounted(() => {
 
 .search-input {
   width: 100%;
-  height: 38px;
+  height: 40px;
   padding: 0 var(--sp-4) 0 34px;
   background: var(--surface-raised);
   border: 1px solid var(--border-default);
@@ -1299,7 +1299,7 @@ onMounted(() => {
 
 .filter-select {
   appearance: none;
-  height: 38px;
+  height: 40px;
   padding: 0 30px 0 var(--sp-3);
   background: var(--surface-raised);
   border: 1px solid var(--border-default);
@@ -1417,8 +1417,8 @@ onMounted(() => {
 }
 
 .card-icon {
-  width: 38px;
-  height: 38px;
+  width: 40px;
+  height: 40px;
   border-radius: var(--radius-md);
   background: var(--accent-surface);
   color: var(--accent);
@@ -1927,7 +1927,7 @@ onMounted(() => {
 }
 .form-input:focus {
   border-color: var(--accent-dim);
-  box-shadow: 0 0 0 3px oklch(76% 0.14 62 / 0.12);
+  box-shadow: var(--shadow-focus);
 }
 .form-input::placeholder { color: var(--text-muted); }
 
@@ -1954,7 +1954,7 @@ onMounted(() => {
 }
 .form-textarea:focus {
   border-color: var(--accent-dim);
-  box-shadow: 0 0 0 3px oklch(76% 0.14 62 / 0.12);
+  box-shadow: var(--shadow-focus);
 }
 .form-textarea::placeholder { color: var(--text-muted); }
 
@@ -2157,7 +2157,7 @@ onMounted(() => {
   flex-wrap: wrap;
   gap: var(--sp-1) var(--sp-2);
   align-items: center;
-  min-height: 38px;
+  min-height: 40px;
   padding: var(--sp-2) var(--sp-3);
   background: var(--surface-overlay);
   border: 1px solid var(--border);

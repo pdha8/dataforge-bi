@@ -828,7 +828,7 @@ onUnmounted(() => {
 
 .search-input {
   width: 100%;
-  height: 38px;
+  height: 40px;
   padding: 0 var(--sp-4) 0 34px;
   background-color: var(--surface-raised);
   border: 1px solid var(--border-default);
@@ -846,7 +846,7 @@ onUnmounted(() => {
 
 .filter-select {
   appearance: none;
-  height: 38px;
+  height: 40px;
   padding: 0 var(--sp-4);
   background-color: var(--surface-raised);
   border: 1px solid var(--border-default);
@@ -866,7 +866,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: var(--sp-2);
-  height: 38px;
+  height: 40px;
   padding: 0 var(--sp-4);
   border-radius: var(--radius-md);
   font-size: var(--text-sm);

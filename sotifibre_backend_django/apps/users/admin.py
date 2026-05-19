@@ -1,6 +1,6 @@
 # apps/users/admin.py
 """
-Users Admin - Interface d'administration pour Sotifibre BI
+Users Admin - Interface d'administration pour DataForge BI
 """
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
@@ -58,7 +58,7 @@ class TeamResource(resources.ModelResource):
 @admin.register(User)
 class UserAdmin(BaseUserAdmin, ImportExportModelAdmin):
     """
-    Administration des utilisateurs Sotifibre BI
+    Administration des utilisateurs DataForge BI
     """
     resource_class = UserResource
     
@@ -184,7 +184,7 @@ class UserAdmin(BaseUserAdmin, ImportExportModelAdmin):
                 '<span class="badge bg-success">✓ {} req/h</span>',
                 obj.api_rate_limit
             )
-        return format_html('<span class="badge bg-secondary">✗</span>')
+        return mark_safe('<span class="badge bg-secondary">✗</span>')
     api_status.short_description = 'API'
     
     def last_activity(self, obj):

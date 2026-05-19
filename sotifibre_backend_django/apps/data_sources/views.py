@@ -326,23 +326,30 @@ class DataQueryViewSet(viewsets.ModelViewSet):
     def execute(self, request, pk=None):
         """Exécute la requête"""
         query = self.get_object()
-        
+
         if not query.is_public and query.created_by != request.user and not request.user.is_admin:
             return forbidden_response(
                 "Vous n'avez pas accès à cette requête",
                 required_permission="is_owner_or_admin"
             )
-        
-        service = QueryService(query)
-        result = service.execute(request.data.get('params'))
-        
-        if result['success']:
-            return success_response(result, "Requête exécutée avec succès")
-        else:
+
+        # Toute exception remontant du service est transformée en 400 propre côté API
+        # plutôt qu'en 500 — ex: connexion DB échouée, paramètres mal typés, etc.
+        try:
+            service = QueryService(query)
+            result = service.execute(request.data.get('params'))
+        except Exception as exc:  # noqa: BLE001 — on convertit en réponse utilisateur
             return error_response(
-                f"Erreur d'exécution: {result.get('error')}",
+                f"Erreur d'exécution: {exc}",
                 status_code=status.HTTP_400_BAD_REQUEST
             )
+
+        if result.get('success'):
+            return success_response(result, "Requête exécutée avec succès")
+        return error_response(
+            f"Erreur d'exécution: {result.get('error', 'inconnue')}",
+            status_code=status.HTTP_400_BAD_REQUEST
+        )
     
     @action(detail=True, methods=['post'])
     def toggle_favorite(self, request, pk=None):
@@ -683,7 +690,7 @@ class PowerQueryViewSet(viewsets.ModelViewSet):
 
 class DataSourceConnectionViewSet(viewsets.ModelViewSet):
     """ViewSet pour DataSourceConnection"""
-    
+
     queryset = DataSourceConnection.objects.all().select_related('data_source')
     serializer_class = DataSourceConnectionSerializer
     permission_classes = [IsAuthenticated, CanManageDataSources]
@@ -691,40 +698,85 @@ class DataSourceConnectionViewSet(viewsets.ModelViewSet):
     filter_backends = [filters.SearchFilter]
     search_fields = ['host', 'database_name']
     ordering = ['data_source__name']
-    
+
+    # ── Mapping connection_type → source_type ──────────────
+    _SRC_MAP = {
+        'postgresql': 'postgresql', 'mysql': 'mysql',
+        'mssql': 'sqlserver', 'oracle': 'oracle',
+        'sqlite': 'sqlite', 'mongodb': 'mongodb',
+        'redis': 'redis',
+    }
+    _DEFAULT_PORTS = {
+        'postgresql': 5432, 'mysql': 3306, 'mssql': 1433,
+        'oracle': 1521, 'sqlite': 0, 'mongodb': 27017, 'redis': 6379,
+    }
+
+    def _ensure_data_source(self, data, user):
+        """Crée un DataSource automatiquement si non fourni dans le payload."""
+        if 'data_source' in data and data['data_source']:
+            return data
+        from apps.data_sources.models import DataSource as DS
+        conn_type = data.get('connection_type', 'postgresql')
+        source_type = self._SRC_MAP.get(conn_type, 'postgresql')
+        ds = DS.objects.create(
+            name=data.get('name', data.get('host', 'Connexion')),
+            source_type=source_type,
+            database_type=conn_type,
+            host=data.get('host', ''),
+            port=int(data['port']) if data.get('port') else None,
+            database_name=data.get('database_name', ''),
+            username=data.get('username', ''),
+            password=data.get('password', ''),
+            description=data.get('description', ''),
+            status='draft',
+            owner=user,
+        )
+        data = dict(data)
+        data['data_source'] = str(ds.id)
+        return data
+
+    def create(self, request, *args, **kwargs):
+        data = self._ensure_data_source(request.data.copy(), request.user)
+        # Injecter le port par défaut selon le type si absent
+        if not data.get('port'):
+            conn_type = data.get('connection_type', 'postgresql')
+            data['port'] = self._DEFAULT_PORTS.get(conn_type, 5432)
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return created_response(serializer.data, "Connexion créée avec succès")
+
+    def partial_update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        # Mettre à jour aussi le nom du DataSource si fourni
+        name = request.data.get('name')
+        if name and instance.data_source_id:
+            from apps.data_sources.models import DataSource as DS
+            DS.objects.filter(id=instance.data_source_id).update(name=name)
+        return super().partial_update(request, *args, **kwargs)
+
     @action(detail=True, methods=['post'])
     def test(self, request, pk=None):
-        """Teste la connexion"""
+        """Teste la connexion — retourne 422 si la connexion échoue."""
         connection = self.get_object()
-        
         try:
             import sqlalchemy
             from sqlalchemy import create_engine, text
-            
-            # Construire la chaîne de connexion
             if connection.connection_string:
                 conn_str = connection.connection_string
             else:
-                conn_str = f"{connection.data_source.database_type}://{connection.username}:{connection.password}@{connection.host}:{connection.port}/{connection.database_name}"
-            
-            engine = create_engine(conn_str, connect_args={'connect_timeout': 10})
-            
+                db_type = getattr(connection.data_source, 'database_type', None) or 'postgresql'
+                conn_str = f"{db_type}://{connection.username}:{connection.password}@{connection.host}:{connection.port}/{connection.database_name}"
+            engine = create_engine(conn_str, connect_args={'connect_timeout': 5})
             with engine.connect() as conn:
-                result = conn.execute(text("SELECT 1"))
-                row = result.fetchone()
-                
-                if row and row[0] == 1:
-                    connection.is_connected = True
-                    connection.last_connected = timezone.now()
-                    connection.connection_test_result = {'success': True, 'message': 'Connexion réussie'}
-                    connection.save()
-                    
-                    return success_response({'success': True}, "Connexion réussie")
-            
-            return error_response("La requête de test a échoué", status_code=500)
-            
+                conn.execute(text("SELECT 1"))
+            connection.is_connected = True
+            connection.last_connected = timezone.now()
+            connection.connection_test_result = {'success': True, 'message': 'Connexion réussie'}
+            connection.save()
+            return success_response({'success': True}, "Connexion réussie")
         except Exception as e:
             connection.is_connected = False
             connection.connection_test_result = {'success': False, 'error': str(e)}
             connection.save()
-            return error_response(f"Échec de connexion: {str(e)}", status_code=500)
+            return error_response(f"Échec de connexion: {str(e)}", status_code=422)

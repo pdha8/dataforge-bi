@@ -19,12 +19,12 @@ SAFE_METHODS = ['GET', 'HEAD', 'OPTIONS']
 
 # Informations de la plateforme
 PLATFORM = {
-    'name': 'Sotifibre',
+    'name': 'DataForge',
     'version': '1.0.0',
-    'description': 'Plateforme Business Intelligence Avancée',
-    'website': 'https://sotifibre.io',
-    'company': 'Sotifibre Analytics',
-    'support_email': 'support@sotifibre.io',
+    'description': 'Plateforme BI Open Source',
+    'website': 'https://github.com/pdha811/dataforge-bi',
+    'company': 'DataForge BI',
+    'support_email': 'courseco06@gmail.com',
 }
 
 # Pagination par défaut

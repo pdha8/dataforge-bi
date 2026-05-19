@@ -236,10 +236,11 @@ class DataQueryCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = DataQuery
         fields = [
-            'data_source', 'name', 'description', 'query_type',
+            'id', 'data_source', 'name', 'description', 'query_type',
             'query_text', 'parameters', 'is_favorite', 'is_public',
             'tags', 'cache_ttl', 'is_cached'
         ]
+        read_only_fields = ['id']
 
 
 # apps/data_sources/serializers.py - CORRIGER PowerQuerySerializer

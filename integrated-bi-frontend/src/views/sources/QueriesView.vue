@@ -964,7 +964,7 @@ onMounted(async () => {
   min-height: 36px;
   transition: all 150ms;
 }
-.btn-save:hover:not(:disabled) { background: oklch(80% 0.14 62); box-shadow: 0 4px 16px oklch(76% 0.14 62 / 0.3); }
+.btn-save:hover:not(:disabled) { background: oklch(80% 0.14 62); box-shadow: var(--shadow-accent); }
 .btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
 
 @keyframes spin-btn { to { transform: rotate(360deg); } }
@@ -1080,7 +1080,7 @@ onMounted(async () => {
   transition: border-color 150ms;
   box-sizing: border-box;
 }
-.form-input:focus { border-color: var(--accent-dim); box-shadow: 0 0 0 3px oklch(76% 0.14 62 / 0.1); }
+.form-input:focus { border-color: var(--accent-dim); box-shadow: var(--shadow-focus); }
 .form-input::placeholder { color: var(--text-muted); }
 .form-textarea { height: auto; padding: var(--sp-3) var(--sp-3); resize: vertical; line-height: 1.55; }
 
@@ -1091,10 +1091,10 @@ onMounted(async () => {
   background: var(--accent); color: var(--text-on-accent);
   border: none; border-radius: var(--radius-md); cursor: pointer;
   font-family: var(--font-ui); font-size: var(--text-sm); font-weight: 600;
-  min-height: 38px; white-space: nowrap;
+  min-height: 40px; white-space: nowrap;
   transition: background 150ms, box-shadow 150ms;
 }
-.btn-primary:hover:not(:disabled) { background: oklch(80% 0.14 62); box-shadow: 0 4px 16px oklch(76% 0.14 62 / 0.28); }
+.btn-primary:hover:not(:disabled) { background: oklch(80% 0.14 62); box-shadow: var(--shadow-accent); }
 .btn-primary:disabled { opacity: 0.65; cursor: not-allowed; }
 .btn--sm { min-height: 32px; padding: var(--sp-1) var(--sp-3); font-size: var(--text-xs); }
 
@@ -1104,7 +1104,7 @@ onMounted(async () => {
   background: none; border: 1px solid var(--border-default);
   border-radius: var(--radius-md); cursor: pointer;
   font-family: var(--font-ui); font-size: var(--text-sm); font-weight: 500;
-  color: var(--text-secondary); min-height: 38px;
+  color: var(--text-secondary); min-height: 40px;
   transition: border-color 150ms, color 150ms;
 }
 .btn-ghost:hover:not(:disabled) { border-color: var(--border-strong); color: var(--text-primary); }

@@ -1,14 +1,14 @@
-/**
- * Tests E2E exhaustifs — Page /dashboards
- * CRUD complet : créer, éditer, dupliquer, publier, supprimer
+﻿/**
+ * Tests E2E exhaustifs â€” Page /dashboards
+ * CRUD complet : crÃ©er, Ã©diter, dupliquer, publier, supprimer
  */
 import { test, expect, Page } from '@playwright/test'
 
-const EMAIL    = process.env.TEST_USER_EMAIL    ?? 'admin@sotifibre.dz'
-const PASSWORD = process.env.TEST_USER_PASSWORD ?? 'SOTIFibre@2026!'
+const EMAIL    = process.env.TEST_USER_EMAIL    ?? 'admin@dataforge.tech'
+const PASSWORD = process.env.TEST_USER_PASSWORD ?? 'DataForge@2026!'
 const TS       = Date.now()
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 async function login(page: Page) {
   await page.goto('/login')
@@ -23,15 +23,15 @@ async function goToDashboards(page: Page) {
   await page.waitForLoadState('networkidle')
 }
 
-// ─── Suite 1 : Chargement ────────────────────────────────────────────────────
+// â”€â”€â”€ Suite 1 : Chargement â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-test.describe('/dashboards – Chargement', () => {
+test.describe('/dashboards â€“ Chargement', () => {
   test.beforeEach(async ({ page }) => {
     await login(page)
     await goToDashboards(page)
   })
 
-  test('GET /api/visualizations/dashboards/ → 200', async ({ page }) => {
+  test('GET /api/visualizations/dashboards/ â†’ 200', async ({ page }) => {
     const statuses: number[] = []
     page.on('response', r => {
       if (/\/api\/visualizations\/dashboards\/(\?|$)/.test(r.url()) && r.request().method() === 'GET')
@@ -58,9 +58,9 @@ test.describe('/dashboards – Chargement', () => {
   })
 })
 
-// ─── Suite 2 : Drawer CREATE ─────────────────────────────────────────────────
+// â”€â”€â”€ Suite 2 : Drawer CREATE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-test.describe('/dashboards – Drawer create', () => {
+test.describe('/dashboards â€“ Drawer create', () => {
   test.beforeEach(async ({ page }) => {
     await login(page)
     await goToDashboards(page)
@@ -80,15 +80,15 @@ test.describe('/dashboards – Drawer create', () => {
   })
 })
 
-// ─── Suite 3 : CREATE ────────────────────────────────────────────────────────
+// â”€â”€â”€ Suite 3 : CREATE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-test.describe('/dashboards – CREATE', () => {
+test.describe('/dashboards â€“ CREATE', () => {
   test.beforeEach(async ({ page }) => {
     await login(page)
     await goToDashboards(page)
   })
 
-  test('POST /api/visualizations/dashboards/ → 201 avec nom correct', async ({ page }) => {
+  test('POST /api/visualizations/dashboards/ â†’ 201 avec nom correct', async ({ page }) => {
     const name = `Dashboard E2E ${TS}`
 
     await page.locator('button', { hasText: /Nouveau tableau/i }).first().click()
@@ -111,8 +111,8 @@ test.describe('/dashboards – CREATE', () => {
     expect(body.name ?? body.data?.name).toBeTruthy()
   })
 
-  test('Le dashboard créé apparaît dans la liste', async ({ page }) => {
-    const name = `Tableau Réseau ${TS}`
+  test('Le dashboard crÃ©Ã© apparaÃ®t dans la liste', async ({ page }) => {
+    const name = `Tableau RÃ©seau ${TS}`
 
     await page.locator('button', { hasText: /Nouveau tableau/i }).first().click()
     await page.locator('[role="dialog"]').waitFor({ state: 'visible' })
@@ -133,15 +133,15 @@ test.describe('/dashboards – CREATE', () => {
   })
 })
 
-// ─── Suite 4 : EDIT ──────────────────────────────────────────────────────────
+// â”€â”€â”€ Suite 4 : EDIT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-test.describe('/dashboards – EDIT', () => {
+test.describe('/dashboards â€“ EDIT', () => {
   test.beforeEach(async ({ page }) => {
     await login(page)
     await goToDashboards(page)
   })
 
-  test('PATCH /api/visualizations/dashboards/{id}/ → 200 avec nouveau nom', async ({ page }) => {
+  test('PATCH /api/visualizations/dashboards/{id}/ â†’ 200 avec nouveau nom', async ({ page }) => {
     // S'assurer qu'il y a au moins un dashboard
     const cards = page.locator('.db-card, .dash-card, .card').first()
     const hasCards = await cards.count()
@@ -150,8 +150,8 @@ test.describe('/dashboards – EDIT', () => {
       return
     }
 
-    // Chercher le bouton éditer (crayon)
-    const editBtn = page.locator('[title="Modifier"], [title="Éditer"], button:has([data-lucide="pencil"]), .act-btn:has([data-lucide="pencil"])').first()
+    // Chercher le bouton Ã©diter (crayon)
+    const editBtn = page.locator('[title="Modifier"], [title="Ã‰diter"], button:has([data-lucide="pencil"]), .act-btn:has([data-lucide="pencil"])').first()
     if (!await editBtn.isVisible({ timeout: 5_000 }).catch(() => false)) {
       test.skip()
       return
@@ -160,7 +160,7 @@ test.describe('/dashboards – EDIT', () => {
     await editBtn.click()
     await page.locator('[role="dialog"]').waitFor({ state: 'visible' })
 
-    const newName = `Modifié Dash ${TS}`
+    const newName = `ModifiÃ© Dash ${TS}`
     const nameInput = page.locator('[role="dialog"] input[type="text"], [role="dialog"] input:not([type])').first()
     await nameInput.fill(newName)
 
@@ -177,18 +177,18 @@ test.describe('/dashboards – EDIT', () => {
   })
 })
 
-// ─── Suite 5 : DELETE ────────────────────────────────────────────────────────
+// â”€â”€â”€ Suite 5 : DELETE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-test.describe('/dashboards – DELETE', () => {
+test.describe('/dashboards â€“ DELETE', () => {
   test.beforeEach(async ({ page }) => {
     await login(page)
     await goToDashboards(page)
   })
 
-  test('DELETE : suppression d\'un dashboard créé via l\'UI → 204 ou 200', async ({ page }) => {
+  test('DELETE : suppression d\'un dashboard crÃ©Ã© via l\'UI â†’ 204 ou 200', async ({ page }) => {
     const name = `DEL Dashboard ${TS}`
 
-    // 1. Créer le dashboard
+    // 1. CrÃ©er le dashboard
     await page.locator('button', { hasText: /Nouveau tableau/i }).first().click()
     await page.locator('[role="dialog"]').waitFor({ state: 'visible' })
 
@@ -230,15 +230,15 @@ test.describe('/dashboards – DELETE', () => {
   })
 })
 
-// ─── Suite 6 : Widgets tab ────────────────────────────────────────────────────
+// â”€â”€â”€ Suite 6 : Widgets tab â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-test.describe('/dashboards – Onglet Widgets', () => {
+test.describe('/dashboards â€“ Onglet Widgets', () => {
   test.beforeEach(async ({ page }) => {
     await login(page)
     await goToDashboards(page)
   })
 
-  test('GET /api/visualizations/widgets/ → 200', async ({ page }) => {
+  test('GET /api/visualizations/widgets/ â†’ 200', async ({ page }) => {
     const widgetTab = page.locator('button', { hasText: /Widgets/i }).first()
 
     const [res] = await Promise.all([

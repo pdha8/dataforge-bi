@@ -1,17 +1,17 @@
-/**
- * Tests E2E exhaustifs — Page /admin
- * Sélecteurs basés sur l'audit réel du code AdminView.vue
+﻿/**
+ * Tests E2E exhaustifs â€” Page /admin
+ * SÃ©lecteurs basÃ©s sur l'audit rÃ©el du code AdminView.vue
  */
 import { test, expect, Page, Response } from '@playwright/test'
 
-const EMAIL    = process.env.TEST_USER_EMAIL    ?? 'admin@sotifibre.dz'
-const PASSWORD = process.env.TEST_USER_PASSWORD ?? 'SOTIFibre@2026!'
+const EMAIL    = process.env.TEST_USER_EMAIL    ?? 'admin@dataforge.tech'
+const PASSWORD = process.env.TEST_USER_PASSWORD ?? 'DataForge@2026!'
 
 const TS = Date.now()
-// Chaque test qui crée un user doit générer son propre email unique
-function uniqueEmail(suffix = '') { return `pw.e2e.${suffix}.${Date.now()}@sotifibre.dz` }
+// Chaque test qui crÃ©e un user doit gÃ©nÃ©rer son propre email unique
+function uniqueEmail(suffix = '') { return `pw.e2e.${suffix}.${Date.now()}@dataforge.tech` }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 async function login(page: Page) {
   await page.goto('/login')
@@ -24,7 +24,7 @@ async function login(page: Page) {
 async function goToAdminTab(page: Page, tabName: string) {
   await page.goto('/admin')
   await page.waitForLoadState('networkidle')
-  // Les tabs utilisent role="tab" avec les labels définis dans TABS[]
+  // Les tabs utilisent role="tab" avec les labels dÃ©finis dans TABS[]
   const tab = page.getByRole('tab', { name: new RegExp(tabName, 'i') })
   if (await tab.count() > 0) await tab.first().click()
   await page.waitForLoadState('networkidle')
@@ -46,16 +46,16 @@ async function waitForResponse(
   return res
 }
 
-// ─── Suite : CRUD Utilisateurs ────────────────────────────────────────────────
+// â”€â”€â”€ Suite : CRUD Utilisateurs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-test.describe('/admin – CRUD Utilisateurs', () => {
+test.describe('/admin â€“ CRUD Utilisateurs', () => {
   test.beforeEach(async ({ page }) => {
     await login(page)
     await goToAdminTab(page, 'Utilisateurs')
   })
 
-  // ── READ ─────────────────────────────────────────────────────────────────────
-  test('READ : GET /api/users/users/ → 200 et liste non-vide', async ({ page }) => {
+  // â”€â”€ READ â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  test('READ : GET /api/users/users/ â†’ 200 et liste non-vide', async ({ page }) => {
     const collected: Response[] = []
     page.on('response', r => {
       if (/\/api\/users\/users\/?(\?|$)/.test(r.url()) && r.request().method() === 'GET')
@@ -78,23 +78,23 @@ test.describe('/admin – CRUD Utilisateurs', () => {
     const ths = table.locator('thead th')
     await expect(ths).toHaveCount(5)
     await expect(ths.nth(0)).toContainText(/Utilisateur/i)
-    await expect(ths.nth(1)).toContainText(/Rôle/i)
+    await expect(ths.nth(1)).toContainText(/RÃ´le/i)
     await expect(ths.nth(2)).toContainText(/Statut/i)
   })
 
-  // ── CREATE ────────────────────────────────────────────────────────────────────
-  test('CREATE : bouton ouvre le drawer avec le titre "Créer un utilisateur"', async ({ page }) => {
-    await page.locator('button', { hasText: 'Créer un utilisateur' }).click()
+  // â”€â”€ CREATE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  test('CREATE : bouton ouvre le drawer avec le titre "CrÃ©er un utilisateur"', async ({ page }) => {
+    await page.locator('button', { hasText: 'CrÃ©er un utilisateur' }).click()
     const drawer = page.locator('[role="dialog"]')
     await expect(drawer).toBeVisible()
-    await expect(drawer.locator('h3')).toContainText(/Créer un utilisateur/i)
+    await expect(drawer.locator('h3')).toContainText(/CrÃ©er un utilisateur/i)
     await expect(page.locator('#f-email')).toBeVisible()
     await expect(page.locator('#f-pwd')).toBeVisible()
   })
 
-  test('CREATE : POST /api/users/users/ → 201 avec les bonnes données', async ({ page }) => {
+  test('CREATE : POST /api/users/users/ â†’ 201 avec les bonnes donnÃ©es', async ({ page }) => {
     const email = uniqueEmail('c1')
-    await page.locator('button', { hasText: 'Créer un utilisateur' }).click()
+    await page.locator('button', { hasText: 'CrÃ©er un utilisateur' }).click()
     await page.locator('#f-fname').fill('Playwright')
     await page.locator('#f-lname').fill('TestCreate')
     await page.locator('#f-email').fill(email)
@@ -110,9 +110,9 @@ test.describe('/admin – CRUD Utilisateurs', () => {
     expect(body.email ?? body.data?.email).toBe(email)
   })
 
-  test('CREATE : le nouvel utilisateur apparaît dans le tableau', async ({ page }) => {
+  test('CREATE : le nouvel utilisateur apparaÃ®t dans le tableau', async ({ page }) => {
     const email = uniqueEmail('c2')
-    await page.locator('button', { hasText: 'Créer un utilisateur' }).click()
+    await page.locator('button', { hasText: 'CrÃ©er un utilisateur' }).click()
     await page.locator('#f-email').fill(email)
     await page.locator('#f-pwd').fill('TestPassword@2026!')
 
@@ -125,8 +125,8 @@ test.describe('/admin – CRUD Utilisateurs', () => {
     await expect(page.locator('td', { hasText: email })).toBeVisible({ timeout: 8_000 })
   })
 
-  // ── EDIT (bouton Modifier — corrigé) ─────────────────────────────────────────
-  test('EDIT : le bouton Modifier ouvre le drawer en mode édition', async ({ page }) => {
+  // â”€â”€ EDIT (bouton Modifier â€” corrigÃ©) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  test('EDIT : le bouton Modifier ouvre le drawer en mode Ã©dition', async ({ page }) => {
     const editBtn = page.locator('button[title="Modifier"]').first()
     await expect(editBtn).toBeVisible({ timeout: 8_000 })
     await editBtn.click()
@@ -135,18 +135,18 @@ test.describe('/admin – CRUD Utilisateurs', () => {
     await expect(drawer).toBeVisible()
     // Titre = "Modifier l'utilisateur"
     await expect(drawer.locator('h3')).toContainText(/Modifier/i)
-    // Email pré-rempli (non vide)
+    // Email prÃ©-rempli (non vide)
     const emailVal = await page.locator('#f-email').inputValue()
     expect(emailVal.trim().length).toBeGreaterThan(0)
-    // Champ mot de passe absent en mode édition
+    // Champ mot de passe absent en mode Ã©dition
     await expect(page.locator('#f-pwd')).not.toBeVisible()
   })
 
-  test('EDIT : PATCH /api/users/users/{id}/ → 200', async ({ page }) => {
+  test('EDIT : PATCH /api/users/users/{id}/ â†’ 200', async ({ page }) => {
     await page.locator('button[title="Modifier"]').first().click()
     await page.locator('[role="dialog"]').waitFor({ state: 'visible' })
 
-    // Modifier le département
+    // Modifier le dÃ©partement
     const dept = page.locator('#f-dept')
     await dept.fill(`E2E-Dept-${TS}`)
 
@@ -158,9 +158,9 @@ test.describe('/admin – CRUD Utilisateurs', () => {
     expect(res.status()).toBe(200)
   })
 
-  // ── TOGGLE STATUS ─────────────────────────────────────────────────────────────
-  test('TOGGLE STATUS : POST toggle_status → 200', async ({ page }) => {
-    const btn = page.locator('button[title="Désactiver"], button[title="Activer"]').first()
+  // â”€â”€ TOGGLE STATUS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  test('TOGGLE STATUS : POST toggle_status â†’ 200', async ({ page }) => {
+    const btn = page.locator('button[title="DÃ©sactiver"], button[title="Activer"]').first()
     await expect(btn).toBeVisible({ timeout: 8_000 })
 
     const res = await waitForResponse(
@@ -169,17 +169,17 @@ test.describe('/admin – CRUD Utilisateurs', () => {
     )
 
     expect(res.status()).toBe(200)
-    // Appuyer à nouveau pour remettre l'état initial
-    const btn2 = page.locator('button[title="Désactiver"], button[title="Activer"]').first()
+    // Appuyer Ã  nouveau pour remettre l'Ã©tat initial
+    const btn2 = page.locator('button[title="DÃ©sactiver"], button[title="Activer"]').first()
     if (await btn2.isVisible()) await btn2.click()
   })
 
-  // ── DELETE ────────────────────────────────────────────────────────────────────
-  test('DELETE : DELETE /api/users/users/{id}/ → 204 et disparition du tableau', async ({ page }) => {
+  // â”€â”€ DELETE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  test('DELETE : DELETE /api/users/users/{id}/ â†’ 204 et disparition du tableau', async ({ page }) => {
     const delEmail = uniqueEmail('del')
 
-    // Créer l'utilisateur à supprimer
-    await page.locator('button', { hasText: 'Créer un utilisateur' }).click()
+    // CrÃ©er l'utilisateur Ã  supprimer
+    await page.locator('button', { hasText: 'CrÃ©er un utilisateur' }).click()
     await page.locator('#f-email').fill(delEmail)
     await page.locator('#f-pwd').fill('TestPassword@2026!')
     await waitForResponse(
@@ -204,22 +204,22 @@ test.describe('/admin – CRUD Utilisateurs', () => {
   })
 })
 
-// ─── Suite : CRUD Rôles ──────────────────────────────────────────────────────
+// â”€â”€â”€ Suite : CRUD RÃ´les â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-test.describe('/admin – CRUD Rôles', () => {
+test.describe('/admin â€“ CRUD RÃ´les', () => {
   test.beforeEach(async ({ page }) => {
     await login(page)
-    await goToAdminTab(page, 'Rôles')
+    await goToAdminTab(page, 'RÃ´les')
   })
 
-  test('READ : la section Rôles affiche du contenu', async ({ page }) => {
-    // La grille de rôles ou les cards
+  test('READ : la section RÃ´les affiche du contenu', async ({ page }) => {
+    // La grille de rÃ´les ou les cards
     const content = page.locator('[class*="role"], [class*="perm"]').first()
     await expect(content).toBeVisible({ timeout: 8_000 })
   })
 
-  test('CREATE ROLE : POST /api/users/roles/ → 201', async ({ page }) => {
-    const btn = page.locator('button', { hasText: /Nouveau rôle/i })
+  test('CREATE ROLE : POST /api/users/roles/ â†’ 201', async ({ page }) => {
+    const btn = page.locator('button', { hasText: /Nouveau rÃ´le/i })
     await expect(btn).toBeVisible()
     await btn.click()
 
@@ -238,7 +238,7 @@ test.describe('/admin – CRUD Rôles', () => {
     expect(res.status()).toBe(201)
   })
 
-  test('EDIT ROLE : PATCH /api/users/roles/{id}/ → 200', async ({ page }) => {
+  test('EDIT ROLE : PATCH /api/users/roles/{id}/ â†’ 200', async ({ page }) => {
     const editBtn = page.locator('button[title="Modifier"]').first()
     await expect(editBtn).toBeVisible({ timeout: 8_000 })
     await editBtn.click()
@@ -257,16 +257,16 @@ test.describe('/admin – CRUD Rôles', () => {
   })
 })
 
-// ─── Suite : CRUD Équipes ─────────────────────────────────────────────────────
+// â”€â”€â”€ Suite : CRUD Ã‰quipes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-test.describe('/admin – CRUD Équipes', () => {
+test.describe('/admin â€“ CRUD Ã‰quipes', () => {
   test.beforeEach(async ({ page }) => {
     await login(page)
-    await goToAdminTab(page, 'Équipes')
+    await goToAdminTab(page, 'Ã‰quipes')
   })
 
-  test('CREATE TEAM : POST /api/users/teams/ → 201', async ({ page }) => {
-    const btn = page.locator('button', { hasText: /Nouvelle équipe/i })
+  test('CREATE TEAM : POST /api/users/teams/ â†’ 201', async ({ page }) => {
+    const btn = page.locator('button', { hasText: /Nouvelle Ã©quipe/i })
     await expect(btn).toBeVisible()
     await btn.click()
 
@@ -282,7 +282,7 @@ test.describe('/admin – CRUD Équipes', () => {
     expect(res.status()).toBe(201)
   })
 
-  test('EDIT TEAM : PATCH /api/users/teams/{id}/ → 200', async ({ page }) => {
+  test('EDIT TEAM : PATCH /api/users/teams/{id}/ â†’ 200', async ({ page }) => {
     const editBtn = page.locator('button[title="Modifier"]').first()
     await expect(editBtn).toBeVisible({ timeout: 8_000 })
     await editBtn.click()

@@ -240,7 +240,7 @@ code {
     transition: box-shadow 0.3s;
 
     &:hover {
-      box-shadow: var(--shadow);
+      box-shadow: var(--shadow-md);
     }
     .button-icon {
       height: 18px;

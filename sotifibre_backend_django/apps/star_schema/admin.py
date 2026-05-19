@@ -4,6 +4,7 @@ Configuration admin pour l'application star_schema
 """
 from django.contrib import admin
 from django.utils.html import format_html
+from django.utils.safestring import mark_safe
 from import_export.admin import ImportExportModelAdmin
 
 from .models import (
@@ -108,8 +109,8 @@ class DimensionalSchemaAdmin(ImportExportModelAdmin):
     
     def is_active_badge(self, obj):
         if obj.is_active:
-            return format_html('<span class="badge bg-success">✅ Actif</span>')
-        return format_html('<span class="badge bg-secondary">⏸️ Inactif</span>')
+            return mark_safe('<span class="badge bg-success">✅ Actif</span>')
+        return mark_safe('<span class="badge bg-secondary">⏸️ Inactif</span>')
     is_active_badge.short_description = 'Actif'
 
 
@@ -127,8 +128,8 @@ class FactRelationshipAdmin(ImportExportModelAdmin):
     
     def is_enabled_badge(self, obj):
         if obj.is_enabled:
-            return format_html('<span class="badge bg-success">✅ Activée</span>')
-        return format_html('<span class="badge bg-secondary">⏸️ Désactivée</span>')
+            return mark_safe('<span class="badge bg-success">✅ Activée</span>')
+        return mark_safe('<span class="badge bg-secondary">⏸️ Désactivée</span>')
     is_enabled_badge.short_description = 'Activée'
 
 
@@ -146,8 +147,8 @@ class DimensionHierarchyAdmin(ImportExportModelAdmin):
     
     def is_active_badge(self, obj):
         if obj.is_active:
-            return format_html('<span class="badge bg-success">✅ Active</span>')
-        return format_html('<span class="badge bg-secondary">⏸️ Inactive</span>')
+            return mark_safe('<span class="badge bg-success">✅ Active</span>')
+        return mark_safe('<span class="badge bg-secondary">⏸️ Inactive</span>')
     is_active_badge.short_description = 'Active'
 
 
@@ -165,8 +166,8 @@ class CustomCalculationAdmin(ImportExportModelAdmin):
     
     def is_active_badge(self, obj):
         if obj.is_active:
-            return format_html('<span class="badge bg-success">✅ Actif</span>')
-        return format_html('<span class="badge bg-secondary">⏸️ Inactif</span>')
+            return mark_safe('<span class="badge bg-success">✅ Actif</span>')
+        return mark_safe('<span class="badge bg-secondary">⏸️ Inactif</span>')
     is_active_badge.short_description = 'Actif'
 
 

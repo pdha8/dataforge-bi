@@ -1,7 +1,7 @@
-import { test, expect, Page } from '@playwright/test'
+﻿import { test, expect, Page } from '@playwright/test'
 
-const EMAIL    = process.env.TEST_USER_EMAIL    ?? 'admin@sotifibre.dz'
-const PASSWORD = process.env.TEST_USER_PASSWORD ?? 'SOTIFibre@2026!'
+const EMAIL    = process.env.TEST_USER_EMAIL    ?? 'admin@dataforge.tech'
+const PASSWORD = process.env.TEST_USER_PASSWORD ?? 'DataForge@2026!'
 const TS       = Date.now()
 
 async function login(page: Page) {
@@ -17,12 +17,12 @@ async function goToConnections(page: Page) {
   await page.waitForLoadState('networkidle')
 }
 
-// ─── Chargement ───────────────────────────────────────────────────────────────
+// â”€â”€â”€ Chargement â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-test.describe('/sources/connections – Chargement', () => {
+test.describe('/sources/connections â€“ Chargement', () => {
   test.beforeEach(async ({ page }) => { await login(page); await goToConnections(page) })
 
-  test('GET /api/data-sources/connections/ → 200', async ({ page }) => {
+  test('GET /api/data-sources/connections/ â†’ 200', async ({ page }) => {
     const statuses: number[] = []
     page.on('response', r => {
       if (/\/api\/data-sources\/connections\/(\?|$)/.test(r.url()) && r.request().method() === 'GET')
@@ -45,9 +45,9 @@ test.describe('/sources/connections – Chargement', () => {
   })
 })
 
-// ─── Drawer CREATE ────────────────────────────────────────────────────────────
+// â”€â”€â”€ Drawer CREATE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-test.describe('/sources/connections – Drawer create', () => {
+test.describe('/sources/connections â€“ Drawer create', () => {
   test.beforeEach(async ({ page }) => { await login(page); await goToConnections(page) })
 
   test('Le bouton "Nouvelle connexion" ouvre le drawer', async ({ page }) => {
@@ -55,7 +55,7 @@ test.describe('/sources/connections – Drawer create', () => {
     await expect(page.locator('[role="dialog"]')).toBeVisible({ timeout: 8_000 })
   })
 
-  test('Le drawer contient les champs requis : Nom, Type, Hôte', async ({ page }) => {
+  test('Le drawer contient les champs requis : Nom, Type, HÃ´te', async ({ page }) => {
     await page.locator('button', { hasText: /Nouvelle connexion/i }).first().click()
     await expect(page.locator('[role="dialog"]')).toBeVisible()
     await expect(page.locator('#conn-name')).toBeVisible({ timeout: 8_000 })
@@ -70,12 +70,12 @@ test.describe('/sources/connections – Drawer create', () => {
   })
 })
 
-// ─── CREATE ───────────────────────────────────────────────────────────────────
+// â”€â”€â”€ CREATE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-test.describe('/sources/connections – CREATE', () => {
+test.describe('/sources/connections â€“ CREATE', () => {
   test.beforeEach(async ({ page }) => { await login(page); await goToConnections(page) })
 
-  test('POST /api/data-sources/connections/ → 201', async ({ page }) => {
+  test('POST /api/data-sources/connections/ â†’ 201', async ({ page }) => {
     const name = `Conn E2E ${TS}`
     await page.locator('button', { hasText: /Nouvelle connexion/i }).first().click()
     await page.locator('[role="dialog"]').waitFor({ state: 'visible' })
@@ -94,8 +94,8 @@ test.describe('/sources/connections – CREATE', () => {
     expect(res.status()).toBe(201)
   })
 
-  test('La connexion créée apparaît dans la liste', async ({ page }) => {
-    const name = `Conn Réseau ${TS}`
+  test('La connexion crÃ©Ã©e apparaÃ®t dans la liste', async ({ page }) => {
+    const name = `Conn RÃ©seau ${TS}`
     await page.locator('button', { hasText: /Nouvelle connexion/i }).first().click()
     await page.locator('[role="dialog"]').waitFor({ state: 'visible' })
 
@@ -115,29 +115,29 @@ test.describe('/sources/connections – CREATE', () => {
   })
 })
 
-// ─── EDIT ─────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ EDIT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-test.describe('/sources/connections – EDIT', () => {
+test.describe('/sources/connections â€“ EDIT', () => {
   test.beforeEach(async ({ page }) => { await login(page); await goToConnections(page) })
 
-  test('Le bouton crayon ouvre le drawer en mode édition', async ({ page }) => {
+  test('Le bouton crayon ouvre le drawer en mode Ã©dition', async ({ page }) => {
     if (await page.locator('.table-row').count() === 0) { test.skip(); return }
     const editBtn = page.locator('.act-btn[title="Modifier"]').first()
     if (!await editBtn.isVisible({ timeout: 5_000 }).catch(() => false)) { test.skip(); return }
     await editBtn.click()
     await expect(page.locator('[role="dialog"]')).toBeVisible()
-    // Le drawer doit s'ouvrir (le nom peut être vide si data_source non mappé)
+    // Le drawer doit s'ouvrir (le nom peut Ãªtre vide si data_source non mappÃ©)
     await expect(page.locator('#conn-host')).toBeVisible({ timeout: 5_000 })
   })
 
-  test('PATCH /api/data-sources/connections/{id}/ → 200', async ({ page }) => {
+  test('PATCH /api/data-sources/connections/{id}/ â†’ 200', async ({ page }) => {
     if (await page.locator('.table-row').count() === 0) { test.skip(); return }
     const editBtn = page.locator('.act-btn[title="Modifier"]').first()
     if (!await editBtn.isVisible({ timeout: 5_000 }).catch(() => false)) { test.skip(); return }
     await editBtn.click()
     await page.locator('[role="dialog"]').waitFor({ state: 'visible' })
 
-    await page.locator('#conn-name').fill(`Conn Modifiée ${TS}`)
+    await page.locator('#conn-name').fill(`Conn ModifiÃ©e ${TS}`)
 
     const [res] = await Promise.all([
       page.waitForResponse(
@@ -151,12 +151,12 @@ test.describe('/sources/connections – EDIT', () => {
   })
 })
 
-// ─── TEST CONNEXION ───────────────────────────────────────────────────────────
+// â”€â”€â”€ TEST CONNEXION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-test.describe('/sources/connections – TEST connexion', () => {
+test.describe('/sources/connections â€“ TEST connexion', () => {
   test.beforeEach(async ({ page }) => { await login(page); await goToConnections(page) })
 
-  test('POST /api/data-sources/connections/{id}/test/ → pas de 5xx inattendu', async ({ page }) => {
+  test('POST /api/data-sources/connections/{id}/test/ â†’ pas de 5xx inattendu', async ({ page }) => {
     if (await page.locator('.table-row').count() === 0) { test.skip(); return }
     const testBtn = page.locator('.act-btn--test').first()
     if (!await testBtn.isVisible({ timeout: 5_000 }).catch(() => false)) { test.skip(); return }
@@ -168,17 +168,17 @@ test.describe('/sources/connections – TEST connexion', () => {
       ),
       testBtn.click(),
     ])
-    // 200 (succès) ou 422 (échec connexion attendu) — jamais 500
+    // 200 (succÃ¨s) ou 422 (Ã©chec connexion attendu) â€” jamais 500
     expect([200, 422]).toContain(res.status())
   })
 })
 
-// ─── DELETE ───────────────────────────────────────────────────────────────────
+// â”€â”€â”€ DELETE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-test.describe('/sources/connections – DELETE', () => {
+test.describe('/sources/connections â€“ DELETE', () => {
   test.beforeEach(async ({ page }) => { await login(page); await goToConnections(page) })
 
-  test('DELETE : suppression d\'une connexion créée via l\'UI → 204', async ({ page }) => {
+  test('DELETE : suppression d\'une connexion crÃ©Ã©e via l\'UI â†’ 204', async ({ page }) => {
     const name = `Conn DEL ${TS}`
 
     await page.locator('button', { hasText: /Nouvelle connexion/i }).first().click()

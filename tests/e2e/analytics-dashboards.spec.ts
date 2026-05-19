@@ -1,24 +1,24 @@
-/**
- * E2E – Module Analytics (Dashboards / Visualizations / KPIs / Reports)
+﻿/**
+ * E2E â€“ Module Analytics (Dashboards / Visualizations / KPIs / Reports)
  *
  * Cibles :  /dashboard  /visualizations  /dashboards  /kpis  /reports
  *
  * Objectifs :
- *   • CRUD complet sur les 4 entités principales du module
- *   • Vérifier que les identifiants (dashboard, widget, schéma…) sont des
- *     <select> dynamiques branchés sur l'API, pas des inputs textes libres
- *   • Vérifier rendu des graphiques (canvas / svg) sur les visualisations
- *   • KPI : changement dynamique de la couleur de statut en fonction des seuils
- *   • Rapports : sélecteur de destinataires multi-select + format HTML
+ *   â€¢ CRUD complet sur les 4 entitÃ©s principales du module
+ *   â€¢ VÃ©rifier que les identifiants (dashboard, widget, schÃ©maâ€¦) sont des
+ *     <select> dynamiques branchÃ©s sur l'API, pas des inputs textes libres
+ *   â€¢ VÃ©rifier rendu des graphiques (canvas / svg) sur les visualisations
+ *   â€¢ KPI : changement dynamique de la couleur de statut en fonction des seuils
+ *   â€¢ Rapports : sÃ©lecteur de destinataires multi-select + format HTML
  */
 
 import { test, expect, Page, Locator } from '@playwright/test'
 
-const EMAIL    = process.env.TEST_USER_EMAIL    ?? 'admin@sotifibre.dz'
-const PASSWORD = process.env.TEST_USER_PASSWORD ?? 'SOTIFibre@2026!'
+const EMAIL    = process.env.TEST_USER_EMAIL    ?? 'admin@dataforge.tech'
+const PASSWORD = process.env.TEST_USER_PASSWORD ?? 'DataForge@2026!'
 const TS       = Date.now()
 
-// ───────────────────────── helpers ──────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 async function login(page: Page) {
   await page.goto('/login')
@@ -51,14 +51,14 @@ async function expectNoServer5xx(page: Page, runner: () => Promise<void>) {
     }
   })
   await runner()
-  expect(errors, `Erreurs 5xx interceptées :\n${errors.join('\n')}`).toHaveLength(0)
+  expect(errors, `Erreurs 5xx interceptÃ©es :\n${errors.join('\n')}`).toHaveLength(0)
 }
 
-// ════════════════════════════════════════════════════════════
-//   1.  /dashboard  – page d'accueil BI
-// ════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//   1.  /dashboard  â€“ page d'accueil BI
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
-test.describe('/dashboard – Home', () => {
+test.describe('/dashboard â€“ Home', () => {
   test.beforeEach(async ({ page }) => { await login(page) })
 
   test('Chargement OK et pas de 5xx', async ({ page }) => {
@@ -69,24 +69,24 @@ test.describe('/dashboard – Home', () => {
 
   test('Au moins une carte KPI / item statistique visible sur la home', async ({ page }) => {
     await goto(page, '/dashboard')
-    // Attendre le rendu (kpi-rail charge les KPIs après mount)
+    // Attendre le rendu (kpi-rail charge les KPIs aprÃ¨s mount)
     await page.waitForTimeout(1500)
     const items = page.locator('.kpi-item, .kpi-skel, .kpi-rail .kpi-name, .stat-card, .home-card, .card, .summary-card, .stats-strip .stat-chip')
     expect(await items.count()).toBeGreaterThan(0)
   })
 })
 
-// ════════════════════════════════════════════════════════════
-//   2.  /dashboards  – CRUD complet
-// ════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//   2.  /dashboards  â€“ CRUD complet
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
-test.describe('/dashboards – CRUD', () => {
+test.describe('/dashboards â€“ CRUD', () => {
   test.beforeEach(async ({ page }) => {
     await login(page)
     await goto(page, '/dashboards')
   })
 
-  test('GET /api/visualizations/dashboards/ → 200', async ({ page }) => {
+  test('GET /api/visualizations/dashboards/ â†’ 200', async ({ page }) => {
     const statuses: number[] = []
     page.on('response', r => {
       if (/\/api\/visualizations\/dashboards\/(\?|$)/.test(r.url()) && r.request().method() === 'GET') {
@@ -99,7 +99,7 @@ test.describe('/dashboards – CRUD', () => {
     expect(statuses[0]).toBe(200)
   })
 
-  test('CREATE : POST /api/visualizations/dashboards/ → 201', async ({ page }) => {
+  test('CREATE : POST /api/visualizations/dashboards/ â†’ 201', async ({ page }) => {
     const name = `Dash Ventes E2E ${TS}`
     const drawer = await openDrawer(page, /Nouveau tableau/i)
     await drawer.locator('input[type="text"], input:not([type])').first().fill(name)
@@ -114,7 +114,7 @@ test.describe('/dashboards – CRUD', () => {
     expect(res.status()).toBe(201)
   })
 
-  test('LIST : le dashboard créé apparaît dans la grille', async ({ page }) => {
+  test('LIST : le dashboard crÃ©Ã© apparaÃ®t dans la grille', async ({ page }) => {
     const name = `Dash Marketing E2E ${TS + 1}`
     const drawer = await openDrawer(page, /Nouveau tableau/i)
     await drawer.locator('input[type="text"], input:not([type])').first().fill(name)
@@ -128,7 +128,7 @@ test.describe('/dashboards – CRUD', () => {
     await expect(page.locator(`text=${name}`).first()).toBeVisible({ timeout: 8_000 })
   })
 
-  test('Onglet Widgets : GET /api/visualizations/widgets/ → 200', async ({ page }) => {
+  test('Onglet Widgets : GET /api/visualizations/widgets/ â†’ 200', async ({ page }) => {
     const widgetTab = page.locator('button', { hasText: /^Widgets/i }).first()
     if (!(await widgetTab.isVisible({ timeout: 4_000 }).catch(() => false))) {
       test.skip()
@@ -145,17 +145,17 @@ test.describe('/dashboards – CRUD', () => {
   })
 })
 
-// ════════════════════════════════════════════════════════════
-//   3.  /visualizations  – CRUD + sélecteur Dashboard dynamique
-// ════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//   3.  /visualizations  â€“ CRUD + sÃ©lecteur Dashboard dynamique
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
-test.describe('/visualizations – CRUD + sélecteurs dynamiques', () => {
+test.describe('/visualizations â€“ CRUD + sÃ©lecteurs dynamiques', () => {
   test.beforeEach(async ({ page }) => {
     await login(page)
     await goto(page, '/visualizations')
   })
 
-  test('GET /api/visualizations/widgets/ → 200 (les visualisations sont stockées comme widgets)', async ({ page }) => {
+  test('GET /api/visualizations/widgets/ â†’ 200 (les visualisations sont stockÃ©es comme widgets)', async ({ page }) => {
     const statuses: number[] = []
     page.on('response', r => {
       if (/\/api\/visualizations\/widgets\/(\?|$)/.test(r.url()) && r.request().method() === 'GET') {
@@ -164,7 +164,7 @@ test.describe('/visualizations – CRUD + sélecteurs dynamiques', () => {
     })
     await page.reload()
     await page.waitForLoadState('networkidle').catch(() => {})
-    expect(statuses.length, 'Aucun GET /api/visualizations/widgets/ détecté').toBeGreaterThan(0)
+    expect(statuses.length, 'Aucun GET /api/visualizations/widgets/ dÃ©tectÃ©').toBeGreaterThan(0)
     expect(statuses[0]).toBe(200)
   })
 
@@ -172,7 +172,7 @@ test.describe('/visualizations – CRUD + sélecteurs dynamiques', () => {
     const drawer = await openDrawer(page, /Nouvelle visualisation/i)
     // Type-picker : grille de boutons type-opt
     const typeOpts = drawer.locator('.type-opt')
-    expect(await typeOpts.count(), 'Aucun bouton type-opt trouvé').toBeGreaterThanOrEqual(3)
+    expect(await typeOpts.count(), 'Aucun bouton type-opt trouvÃ©').toBeGreaterThanOrEqual(3)
     // <select> dynamique pour la destination (Tableau de bord)
     const selects = drawer.locator('select')
     expect(await selects.count(), 'Aucun <select> dynamique dans le drawer').toBeGreaterThan(0)
@@ -180,20 +180,20 @@ test.describe('/visualizations – CRUD + sélecteurs dynamiques', () => {
 
   test('Le champ "Tableau de bord" est un <select> et n\'est PAS un input texte libre', async ({ page }) => {
     const drawer = await openDrawer(page, /Nouvelle visualisation/i)
-    // Cherche le label "Tableau de bord" et vérifie qu'il pointe sur un <select>
+    // Cherche le label "Tableau de bord" et vÃ©rifie qu'il pointe sur un <select>
     const dashboardLabel = drawer.locator('label[for="f-dash"], label:has-text("Tableau de bord")').first()
     await expect(dashboardLabel, 'Pas de label "Tableau de bord" dans le drawer').toBeVisible({ timeout: 4_000 })
     const dashSelect = drawer.locator('select#f-dash, select[name="dashboard"]').first()
-    await expect(dashSelect, 'Le champ Tableau de bord doit être un <select>').toBeVisible()
-    // Il ne doit plus exister d'input texte avec id f-src (ancien champ "Source de données" libre)
+    await expect(dashSelect, 'Le champ Tableau de bord doit Ãªtre un <select>').toBeVisible()
+    // Il ne doit plus exister d'input texte avec id f-src (ancien champ "Source de donnÃ©es" libre)
     const oldSourceInput = drawer.locator('input#f-src')
-    expect(await oldSourceInput.count(), 'L\'ancien input "Source de données" libre subsiste').toBe(0)
+    expect(await oldSourceInput.count(), 'L\'ancien input "Source de donnÃ©es" libre subsiste').toBe(0)
   })
 
-  test('Une visualisation rendue à l\'écran doit afficher un <canvas> ou un <svg>', async ({ page }) => {
+  test('Une visualisation rendue Ã  l\'Ã©cran doit afficher un <canvas> ou un <svg>', async ({ page }) => {
     const charts = page.locator('canvas, .chart svg, .echart svg, [data-chart]')
     const count = await charts.count()
-    // si aucune viz n'est encore créée le test est soft-skippé
+    // si aucune viz n'est encore crÃ©Ã©e le test est soft-skippÃ©
     if (count === 0) {
       test.skip()
       return
@@ -202,17 +202,17 @@ test.describe('/visualizations – CRUD + sélecteurs dynamiques', () => {
   })
 })
 
-// ════════════════════════════════════════════════════════════
-//   4.  /kpis  – CRUD + cible + seuils + couleur de statut
-// ════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//   4.  /kpis  â€“ CRUD + cible + seuils + couleur de statut
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
-test.describe('/kpis – CRUD + alertes', () => {
+test.describe('/kpis â€“ CRUD + alertes', () => {
   test.beforeEach(async ({ page }) => {
     await login(page)
     await goto(page, '/kpis')
   })
 
-  test('GET /api/visualizations/kpis/ → 200', async ({ page }) => {
+  test('GET /api/visualizations/kpis/ â†’ 200', async ({ page }) => {
     const statuses: number[] = []
     page.on('response', r => {
       if (/\/api\/visualizations\/kpis\/(\?|$)/.test(r.url()) && r.request().method() === 'GET') {
@@ -225,14 +225,14 @@ test.describe('/kpis – CRUD + alertes', () => {
     expect(statuses[0]).toBe(200)
   })
 
-  test('CREATE : KPI avec cible + seuils warning/critical → 201', async ({ page }) => {
+  test('CREATE : KPI avec cible + seuils warning/critical â†’ 201', async ({ page }) => {
     const name = `KPI CA Mensuel ${TS}`
     const drawer = await openDrawer(page, /Nouveau KPI/i)
 
     // nom
     await drawer.locator('input[type="text"], input:not([type])').first().fill(name)
 
-    // cible numérique
+    // cible numÃ©rique
     const numericInputs = drawer.locator('input[type="number"]')
     const numCount = await numericInputs.count()
     if (numCount >= 1) await numericInputs.nth(0).fill('1000000')
@@ -260,31 +260,31 @@ test.describe('/kpis – CRUD + alertes', () => {
         ).catch(() => null),
         critTab.click(),
       ])
-      // si l'endpoint existe il doit répondre 200
+      // si l'endpoint existe il doit rÃ©pondre 200
       if (res) expect(res.status()).toBe(200)
     }
   })
 
-  test('La couleur du badge de statut change selon le statut (CSS class présente)', async ({ page }) => {
+  test('La couleur du badge de statut change selon le statut (CSS class prÃ©sente)', async ({ page }) => {
     const badges = page.locator('.st--critical, .st--at-risk, .st--achieved, .st--on_track, .status-badge')
     const count = await badges.count()
     if (count === 0) { test.skip(); return }
-    // au moins un badge a une classe de statut typée
+    // au moins un badge a une classe de statut typÃ©e
     await expect(badges.first()).toBeVisible()
   })
 })
 
-// ════════════════════════════════════════════════════════════
-//   5.  /reports  – Template HTML + multi-select destinataires
-// ════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//   5.  /reports  â€“ Template HTML + multi-select destinataires
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
-test.describe('/reports – Rapports HTML & destinataires multi-select', () => {
+test.describe('/reports â€“ Rapports HTML & destinataires multi-select', () => {
   test.beforeEach(async ({ page }) => {
     await login(page)
     await goto(page, '/reports')
   })
 
-  test('GET /api/visualizations/reports/ → 200', async ({ page }) => {
+  test('GET /api/visualizations/reports/ â†’ 200', async ({ page }) => {
     const statuses: number[] = []
     page.on('response', r => {
       if (/\/api\/visualizations\/reports\/(\?|$)/.test(r.url()) && r.request().method() === 'GET') {
@@ -316,25 +316,25 @@ test.describe('/reports – Rapports HTML & destinataires multi-select', () => {
     const options = await target.locator('option').allTextContents()
     expect(
       options.some(o => /html/i.test(o)),
-      `Aucun format HTML trouvé. Formats détectés : ${options.join(', ')}`,
+      `Aucun format HTML trouvÃ©. Formats dÃ©tectÃ©s : ${options.join(', ')}`,
     ).toBe(true)
   })
 
-  test('Les destinataires sont gérés en multi-select (chips / tags)', async ({ page }) => {
+  test('Les destinataires sont gÃ©rÃ©s en multi-select (chips / tags)', async ({ page }) => {
     const drawer = await openDrawer(page, /Nouveau rapport/i)
     const tagsArea = drawer.locator(
       '.tags-selector, .tags-chips, .tag-chip, .tag-input, .tags-dropdown'
     )
-    expect(await tagsArea.count(), 'Aucun composant multi-select destinataires détecté').toBeGreaterThan(0)
+    expect(await tagsArea.count(), 'Aucun composant multi-select destinataires dÃ©tectÃ©').toBeGreaterThan(0)
   })
 
-  test('CREATE rapport HTML → 201 (sélection minimale du 1er dashboard disponible)', async ({ page }) => {
+  test('CREATE rapport HTML â†’ 201 (sÃ©lection minimale du 1er dashboard disponible)', async ({ page }) => {
     const drawer = await openDrawer(page, /Nouveau rapport/i)
 
     // nom
     await drawer.locator('input[type="text"], input:not([type])').first().fill(`Rapport HTML ${TS}`)
 
-    // dashboard : premier select, première option non vide
+    // dashboard : premier select, premiÃ¨re option non vide
     const selects = drawer.locator('select')
     if (await selects.count() < 1) { test.skip(); return }
 

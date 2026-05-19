@@ -57,7 +57,7 @@ async function fetchNotifPreview() {
     ])
     const rows = Array.isArray(listRes.data?.results) ? listRes.data.results : Array.isArray(listRes.data) ? listRes.data : []
     notifs.value = rows
-    unreadCount.value = countRes.data?.count ?? countRes.data?.unread_count ?? 0
+    unreadCount.value = countRes.data?.data?.count ?? countRes.data?.count ?? countRes.data?.unread_count ?? 0
   } catch {
     notifs.value = []
     unreadCount.value = 0
@@ -79,10 +79,15 @@ function openNotifications() {
 
 onMounted(fetchNotifPreview)
 
-function handleLogout() {
-  auth.logout()
+function goToProfile() {
   showUserMenu.value = false
-  router.push('/login')
+  router.push('/profile')
+}
+
+function handleLogout() {
+  showUserMenu.value = false
+  auth.logout()
+  router.replace('/login')
 }
 
 const routeLabels: Record<string, string> = {
@@ -102,7 +107,7 @@ const pageTitle = computed(() => {
   for (const [path, label] of Object.entries(routeLabels)) {
     if (route.path.startsWith(path)) return label
   }
-  return 'Integrated BI'
+  return 'DataForge BI'
 })
 
 const userInitials = computed(() => {
@@ -208,7 +213,7 @@ const userName = computed(() => {
               <span class="dropdown-role">{{ auth.user?.role ?? 'Analyste BI' }}</span>
             </div>
             <div class="dropdown-divider"></div>
-            <button class="dropdown-item" role="menuitem" @click="showUserMenu = false">
+            <button class="dropdown-item" role="menuitem" @click="goToProfile">
               <User :size="15" />
               <span>Mon profil</span>
             </button>

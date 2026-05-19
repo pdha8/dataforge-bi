@@ -1,14 +1,14 @@
-/**
- * Tests E2E exhaustifs — Page /kpis
- * CRUD complet : créer, éditer, calculer, supprimer
+﻿/**
+ * Tests E2E exhaustifs â€” Page /kpis
+ * CRUD complet : crÃ©er, Ã©diter, calculer, supprimer
  */
 import { test, expect, Page } from '@playwright/test'
 
-const EMAIL    = process.env.TEST_USER_EMAIL    ?? 'admin@sotifibre.dz'
-const PASSWORD = process.env.TEST_USER_PASSWORD ?? 'SOTIFibre@2026!'
+const EMAIL    = process.env.TEST_USER_EMAIL    ?? 'admin@dataforge.tech'
+const PASSWORD = process.env.TEST_USER_PASSWORD ?? 'DataForge@2026!'
 const TS       = Date.now()
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 async function login(page: Page) {
   await page.goto('/login')
@@ -27,15 +27,15 @@ function createBtn(page: Page) {
   return page.locator('button', { hasText: /Nouveau KPI/i }).first()
 }
 
-// ─── Suite 1 : Chargement ────────────────────────────────────────────────────
+// â”€â”€â”€ Suite 1 : Chargement â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-test.describe('/kpis – Chargement', () => {
+test.describe('/kpis â€“ Chargement', () => {
   test.beforeEach(async ({ page }) => {
     await login(page)
     await goToKpis(page)
   })
 
-  test('GET /api/visualizations/kpis/ → 200', async ({ page }) => {
+  test('GET /api/visualizations/kpis/ â†’ 200', async ({ page }) => {
     const statuses: number[] = []
     page.on('response', r => {
       if (/\/api\/visualizations\/kpis\/(\?|$)/.test(r.url()) && r.request().method() === 'GET')
@@ -57,20 +57,20 @@ test.describe('/kpis – Chargement', () => {
     expect(errors, `Erreurs 5xx:\n${errors.join('\n')}`).toHaveLength(0)
   })
 
-  test('La page contient le bouton de création de KPI', async ({ page }) => {
+  test('La page contient le bouton de crÃ©ation de KPI', async ({ page }) => {
     await expect(createBtn(page)).toBeVisible({ timeout: 8_000 })
   })
 })
 
-// ─── Suite 2 : Drawer CREATE ─────────────────────────────────────────────────
+// â”€â”€â”€ Suite 2 : Drawer CREATE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-test.describe('/kpis – Drawer create', () => {
+test.describe('/kpis â€“ Drawer create', () => {
   test.beforeEach(async ({ page }) => {
     await login(page)
     await goToKpis(page)
   })
 
-  test('Le drawer de création s\'ouvre avec les champs requis', async ({ page }) => {
+  test('Le drawer de crÃ©ation s\'ouvre avec les champs requis', async ({ page }) => {
     await createBtn(page).click()
     const drawer = page.locator('[role="dialog"]')
     await expect(drawer).toBeVisible({ timeout: 8_000 })
@@ -79,16 +79,16 @@ test.describe('/kpis – Drawer create', () => {
   })
 })
 
-// ─── Suite 3 : CREATE ────────────────────────────────────────────────────────
+// â”€â”€â”€ Suite 3 : CREATE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-test.describe('/kpis – CREATE', () => {
+test.describe('/kpis â€“ CREATE', () => {
   test.beforeEach(async ({ page }) => {
     await login(page)
     await goToKpis(page)
   })
 
-  test('POST /api/visualizations/kpis/ → 201', async ({ page }) => {
-    const name = `KPI Débit ${TS}`
+  test('POST /api/visualizations/kpis/ â†’ 201', async ({ page }) => {
+    const name = `KPI DÃ©bit ${TS}`
 
     await createBtn(page).click()
     await page.locator('[role="dialog"]').waitFor({ state: 'visible' })
@@ -107,8 +107,8 @@ test.describe('/kpis – CREATE', () => {
     expect(res.status()).toBe(201)
   })
 
-  test('Le KPI créé apparaît dans la liste', async ({ page }) => {
-    const name = `KPI Disponibilité ${TS}`
+  test('Le KPI crÃ©Ã© apparaÃ®t dans la liste', async ({ page }) => {
+    const name = `KPI DisponibilitÃ© ${TS}`
 
     await createBtn(page).click()
     await page.locator('[role="dialog"]').waitFor({ state: 'visible' })
@@ -129,15 +129,15 @@ test.describe('/kpis – CREATE', () => {
   })
 })
 
-// ─── Suite 4 : EDIT ──────────────────────────────────────────────────────────
+// â”€â”€â”€ Suite 4 : EDIT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-test.describe('/kpis – EDIT', () => {
+test.describe('/kpis â€“ EDIT', () => {
   test.beforeEach(async ({ page }) => {
     await login(page)
     await goToKpis(page)
   })
 
-  test('PATCH /api/visualizations/kpis/{id}/ → 200', async ({ page }) => {
+  test('PATCH /api/visualizations/kpis/{id}/ â†’ 200', async ({ page }) => {
     const hasKpis = await page.locator('.kpi-card, .list-row').count()
     if (hasKpis === 0) {
       test.skip()
@@ -153,7 +153,7 @@ test.describe('/kpis – EDIT', () => {
     await editBtn.click()
     await page.locator('[role="dialog"]').waitFor({ state: 'visible' })
 
-    const newName = `KPI Modifié ${TS}`
+    const newName = `KPI ModifiÃ© ${TS}`
     await page.locator('#f-name').fill(newName)
 
     const [res] = await Promise.all([
@@ -171,18 +171,18 @@ test.describe('/kpis – EDIT', () => {
   })
 })
 
-// ─── Suite 5 : DELETE ────────────────────────────────────────────────────────
+// â”€â”€â”€ Suite 5 : DELETE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-test.describe('/kpis – DELETE', () => {
+test.describe('/kpis â€“ DELETE', () => {
   test.beforeEach(async ({ page }) => {
     await login(page)
     await goToKpis(page)
   })
 
-  test('DELETE : suppression d\'un KPI créé → 204', async ({ page }) => {
+  test('DELETE : suppression d\'un KPI crÃ©Ã© â†’ 204', async ({ page }) => {
     const name = `KPI DEL ${TS}`
 
-    // 1. Créer
+    // 1. CrÃ©er
     await createBtn(page).click()
     await page.locator('[role="dialog"]').waitFor({ state: 'visible' })
 
@@ -223,15 +223,15 @@ test.describe('/kpis – DELETE', () => {
   })
 })
 
-// ─── Suite 6 : Calcul KPI ────────────────────────────────────────────────────
+// â”€â”€â”€ Suite 6 : Calcul KPI â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-test.describe('/kpis – Calcul', () => {
+test.describe('/kpis â€“ Calcul', () => {
   test.beforeEach(async ({ page }) => {
     await login(page)
     await goToKpis(page)
   })
 
-  test('POST /api/visualizations/kpis/{id}/calculate/ → 200', async ({ page }) => {
+  test('POST /api/visualizations/kpis/{id}/calculate/ â†’ 200', async ({ page }) => {
     const hasKpis = await page.locator('.kpi-card, .list-row').count()
     if (hasKpis === 0) {
       test.skip()
@@ -256,15 +256,15 @@ test.describe('/kpis – Calcul', () => {
   })
 })
 
-// ─── Suite 7 : Filtres endpoint ──────────────────────────────────────────────
+// â”€â”€â”€ Suite 7 : Filtres endpoint â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-test.describe('/kpis – Filtres API', () => {
+test.describe('/kpis â€“ Filtres API', () => {
   test.beforeEach(async ({ page }) => {
     await login(page)
     await goToKpis(page)
   })
 
-  test('GET /api/visualizations/kpis/critical/ → 200', async ({ page }) => {
+  test('GET /api/visualizations/kpis/critical/ â†’ 200', async ({ page }) => {
     const statuses: number[] = []
     page.on('response', r => {
       if (/\/api\/visualizations\/kpis\/critical\//.test(r.url()))

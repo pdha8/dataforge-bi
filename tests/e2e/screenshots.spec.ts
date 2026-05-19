@@ -1,13 +1,13 @@
-/**
- * Génération automatique des captures d'écran de l'application
- * pour le rapport PFE. Sortie : ../docs/screenshots/<page>.png
+﻿/**
+ * GÃ©nÃ©ration automatique des captures d'Ã©cran de l'application
+ * pour la documentation. Sortie : ../docs/screenshots/<page>.png
  */
 import { test, Page } from '@playwright/test'
 import path from 'path'
 import fs from 'fs'
 
-const EMAIL    = process.env.TEST_USER_EMAIL    ?? 'admin@sotifibre.dz'
-const PASSWORD = process.env.TEST_USER_PASSWORD ?? 'SOTIFibre@2026!'
+const EMAIL    = process.env.TEST_USER_EMAIL    ?? 'admin@dataforge.tech'
+const PASSWORD = process.env.TEST_USER_PASSWORD ?? 'DataForge@2026!'
 
 const OUT = path.resolve(__dirname, '../../docs/screenshots')
 if (!fs.existsSync(OUT)) fs.mkdirSync(OUT, { recursive: true })
@@ -29,29 +29,29 @@ async function shot(page: Page, route: string, name: string, wait = 1500) {
   await page.screenshot({ path: path.join(OUT, `${name}.png`), fullPage: false })
 }
 
-// ─── Pages principales ──────────────────────────────────────
+// â”€â”€â”€ Pages principales â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-test('screenshot – dashboard',        async ({ page }) => { await login(page); await shot(page, '/dashboard',        'dashboard') })
-test('screenshot – sources',          async ({ page }) => { await login(page); await shot(page, '/sources',          'sources') })
-test('screenshot – sources-files',    async ({ page }) => { await login(page); await shot(page, '/sources/files',    'sources-files') })
-test('screenshot – sources-connect',  async ({ page }) => { await login(page); await shot(page, '/sources/connections','sources-connections') })
-test('screenshot – sources-monitor',  async ({ page }) => { await login(page); await shot(page, '/sources/monitoring','sources-monitoring') })
-test('screenshot – power-queries',    async ({ page }) => { await login(page); await shot(page, '/power-queries',    'power-queries') })
-test('screenshot – queries',          async ({ page }) => { await login(page); await shot(page, '/queries',          'queries') })
+test('screenshot â€“ dashboard',        async ({ page }) => { await login(page); await shot(page, '/dashboard',        'dashboard') })
+test('screenshot â€“ sources',          async ({ page }) => { await login(page); await shot(page, '/sources',          'sources') })
+test('screenshot â€“ sources-files',    async ({ page }) => { await login(page); await shot(page, '/sources/files',    'sources-files') })
+test('screenshot â€“ sources-connect',  async ({ page }) => { await login(page); await shot(page, '/sources/connections','sources-connections') })
+test('screenshot â€“ sources-monitor',  async ({ page }) => { await login(page); await shot(page, '/sources/monitoring','sources-monitoring') })
+test('screenshot â€“ power-queries',    async ({ page }) => { await login(page); await shot(page, '/power-queries',    'power-queries') })
+test('screenshot â€“ queries',          async ({ page }) => { await login(page); await shot(page, '/queries',          'queries') })
 
-test('screenshot – pipelines',        async ({ page }) => { await login(page); await shot(page, '/pipelines',        'pipelines') })
-test('screenshot – executions',       async ({ page }) => { await login(page); await shot(page, '/executions',       'executions') })
+test('screenshot â€“ pipelines',        async ({ page }) => { await login(page); await shot(page, '/pipelines',        'pipelines') })
+test('screenshot â€“ executions',       async ({ page }) => { await login(page); await shot(page, '/executions',       'executions') })
 
-test('screenshot – warehouse',        async ({ page }) => { await login(page); await shot(page, '/warehouse',        'warehouse') })
-test('screenshot – star-schema',      async ({ page }) => { await login(page); await shot(page, '/star-schema',      'star-schema') })
-test('screenshot – ml-analytics',     async ({ page }) => { await login(page); await shot(page, '/ml-analytics',     'ml-analytics') })
+test('screenshot â€“ warehouse',        async ({ page }) => { await login(page); await shot(page, '/warehouse',        'warehouse') })
+test('screenshot â€“ star-schema',      async ({ page }) => { await login(page); await shot(page, '/star-schema',      'star-schema') })
+test('screenshot â€“ ml-analytics',     async ({ page }) => { await login(page); await shot(page, '/ml-analytics',     'ml-analytics') })
 
-test('screenshot – visualizations',   async ({ page }) => { await login(page); await shot(page, '/visualizations',   'visualizations') })
-test('screenshot – dashboards',       async ({ page }) => { await login(page); await shot(page, '/dashboards',       'dashboards') })
-test('screenshot – kpis',             async ({ page }) => { await login(page); await shot(page, '/kpis',             'kpis') })
-test('screenshot – reports',          async ({ page }) => { await login(page); await shot(page, '/reports',          'reports') })
+test('screenshot â€“ visualizations',   async ({ page }) => { await login(page); await shot(page, '/visualizations',   'visualizations') })
+test('screenshot â€“ dashboards',       async ({ page }) => { await login(page); await shot(page, '/dashboards',       'dashboards') })
+test('screenshot â€“ kpis',             async ({ page }) => { await login(page); await shot(page, '/kpis',             'kpis') })
+test('screenshot â€“ reports',          async ({ page }) => { await login(page); await shot(page, '/reports',          'reports') })
 
-test('screenshot – notifications',    async ({ page }) => { await login(page); await shot(page, '/notifications',    'notifications') })
-test('screenshot – favorites',        async ({ page }) => { await login(page); await shot(page, '/favorites',        'favorites') })
-test('screenshot – admin',            async ({ page }) => { await login(page); await shot(page, '/admin',            'admin') })
-test('screenshot – profile',          async ({ page }) => { await login(page); await shot(page, '/profile',          'profile') })
+test('screenshot â€“ notifications',    async ({ page }) => { await login(page); await shot(page, '/notifications',    'notifications') })
+test('screenshot â€“ favorites',        async ({ page }) => { await login(page); await shot(page, '/favorites',        'favorites') })
+test('screenshot â€“ admin',            async ({ page }) => { await login(page); await shot(page, '/admin',            'admin') })
+test('screenshot â€“ profile',          async ({ page }) => { await login(page); await shot(page, '/profile',          'profile') })

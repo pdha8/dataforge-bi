@@ -4,6 +4,7 @@ Configuration admin pour l'application visualizations
 """
 from django.contrib import admin
 from django.utils.html import format_html
+from django.utils.safestring import mark_safe
 from django.utils import timezone
 from import_export.admin import ImportExportModelAdmin
 
@@ -238,7 +239,7 @@ class KPIAdmin(ImportExportModelAdmin):
                 '<span class="badge bg-{}">{}{}%</span>',
                 color, sign, obj.trend_percentage
             )
-        return format_html('<span class="badge bg-secondary">N/A</span>')
+        return mark_safe('<span class="badge bg-secondary">N/A</span>')
     trend_display.short_description = 'Tendance'
     
     def status_badge(self, obj):

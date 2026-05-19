@@ -1,8 +1,8 @@
-{
+﻿{
   "info": {
-    "name": "Sotifibre BI – API Tests",
+    "name": "Sotifibre BI â€“ API Tests",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "_description": "Tests automatisés des routes principales de l'API BI. Utiliser avec Newman + fichier d'environnement."
+    "_description": "Tests automatisÃ©s des routes principales de l'API BI. Utiliser avec Newman + fichier d'environnement."
   },
   "variable": [],
   "item": [
@@ -10,7 +10,7 @@
       "name": "Auth",
       "item": [
         {
-          "name": "POST /api/auth/jwt/token/ – Login",
+          "name": "POST /api/auth/jwt/token/ â€“ Login",
           "event": [
             {
               "listen": "test",
@@ -23,7 +23,7 @@
                   "  pm.expect(json).to.have.property('refresh');",
                   "  pm.expect(json.access).to.be.a('string').and.not.empty;",
                   "});",
-                  "// Stocker les tokens dans l'environnement pour les requêtes suivantes",
+                  "// Stocker les tokens dans l'environnement pour les requÃªtes suivantes",
                   "const body = pm.response.json();",
                   "pm.environment.set('access_token', body.access);",
                   "pm.environment.set('refresh_token', body.refresh);"
@@ -43,7 +43,7 @@
           }
         },
         {
-          "name": "POST /api/auth/jwt/refresh/ – Refresh token",
+          "name": "POST /api/auth/jwt/refresh/ â€“ Refresh token",
           "event": [
             {
               "listen": "test",
@@ -75,14 +75,14 @@
       "name": "Users",
       "item": [
         {
-          "name": "GET /api/users/users/ – Liste des utilisateurs",
+          "name": "GET /api/users/users/ â€“ Liste des utilisateurs",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
                   "pm.test('Status 200', () => pm.response.to.have.status(200));",
-                  "pm.test('Réponse est un tableau ou paginé', () => {",
+                  "pm.test('RÃ©ponse est un tableau ou paginÃ©', () => {",
                   "  const json = pm.response.json();",
                   "  const list = Array.isArray(json) ? json : json.results;",
                   "  pm.expect(list).to.be.an('array');",
@@ -113,14 +113,14 @@
       "name": "Data Sources",
       "item": [
         {
-          "name": "GET /api/data-sources/sources/ – Liste des sources",
+          "name": "GET /api/data-sources/sources/ â€“ Liste des sources",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
                   "pm.test('Status 200', () => pm.response.to.have.status(200));",
-                  "pm.test('Réponse est une liste', () => {",
+                  "pm.test('RÃ©ponse est une liste', () => {",
                   "  const json = pm.response.json();",
                   "  const list = Array.isArray(json) ? json : json.results;",
                   "  pm.expect(list).to.be.an('array');",
@@ -146,14 +146,14 @@
           }
         },
         {
-          "name": "GET /api/data-sources/connections/ – Connexions",
+          "name": "GET /api/data-sources/connections/ â€“ Connexions",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
                   "pm.test('Status 200', () => pm.response.to.have.status(200));",
-                  "pm.test('Réponse est une liste', () => {",
+                  "pm.test('RÃ©ponse est une liste', () => {",
                   "  const json = pm.response.json();",
                   "  const list = Array.isArray(json) ? json : json.results;",
                   "  pm.expect(list).to.be.an('array');",
@@ -170,7 +170,7 @@
           }
         },
         {
-          "name": "GET /api/data-sources/files/ – Fichiers",
+          "name": "GET /api/data-sources/files/ â€“ Fichiers",
           "event": [
             {
               "listen": "test",
@@ -194,14 +194,14 @@
       "name": "ETL Pipelines",
       "item": [
         {
-          "name": "GET /api/etl/pipelines/ – Liste des pipelines",
+          "name": "GET /api/etl/pipelines/ â€“ Liste des pipelines",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
                   "pm.test('Status 200', () => pm.response.to.have.status(200));",
-                  "pm.test('Réponse est une liste', () => {",
+                  "pm.test('RÃ©ponse est une liste', () => {",
                   "  const json = pm.response.json();",
                   "  const list = Array.isArray(json) ? json : json.results;",
                   "  pm.expect(list).to.be.an('array');",
@@ -227,14 +227,14 @@
           }
         },
         {
-          "name": "GET /api/etl/executions/ – Exécutions ETL",
+          "name": "GET /api/etl/executions/ â€“ ExÃ©cutions ETL",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
                   "pm.test('Status 200', () => pm.response.to.have.status(200));",
-                  "pm.test('Chaque exécution a status, started_at, rows_processed', () => {",
+                  "pm.test('Chaque exÃ©cution a status, started_at, rows_processed', () => {",
                   "  const json = pm.response.json();",
                   "  const list = Array.isArray(json) ? json : (json.results ?? []);",
                   "  if (list.length > 0) {",
@@ -259,14 +259,14 @@
       "name": "Visualisations",
       "item": [
         {
-          "name": "GET /api/visualizations/dashboards/ – Dashboards",
+          "name": "GET /api/visualizations/dashboards/ â€“ Dashboards",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
                   "pm.test('Status 200', () => pm.response.to.have.status(200));",
-                  "pm.test('Réponse est une liste', () => {",
+                  "pm.test('RÃ©ponse est une liste', () => {",
                   "  const json = pm.response.json();",
                   "  const list = Array.isArray(json) ? json : json.results;",
                   "  pm.expect(list).to.be.an('array');",
@@ -283,7 +283,7 @@
           }
         },
         {
-          "name": "GET /api/visualizations/kpis/ – KPIs",
+          "name": "GET /api/visualizations/kpis/ â€“ KPIs",
           "event": [
             {
               "listen": "test",
@@ -310,7 +310,7 @@
           }
         },
         {
-          "name": "GET /api/visualizations/reports/ – Rapports",
+          "name": "GET /api/visualizations/reports/ â€“ Rapports",
           "event": [
             {
               "listen": "test",
@@ -334,7 +334,7 @@
       "name": "Notifications",
       "item": [
         {
-          "name": "GET /api/notifications/alerts/ – Alertes",
+          "name": "GET /api/notifications/alerts/ â€“ Alertes",
           "event": [
             {
               "listen": "test",

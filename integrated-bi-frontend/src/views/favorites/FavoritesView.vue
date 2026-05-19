@@ -306,9 +306,8 @@ onMounted(fetchFavorites)
 
 /* Card */
 .fav-card {
-  background: var(--surface-raised);
+  background: color-mix(in oklch, var(--fc, var(--accent)) 4%, var(--surface-raised));
   border: 1px solid var(--border-subtle);
-  border-left: 3px solid var(--fc, var(--accent));
   border-radius: var(--radius-lg);
   padding: var(--sp-4);
   display: flex;
@@ -317,6 +316,11 @@ onMounted(fetchFavorites)
   opacity: 0; transform: translateY(4px);
   animation: fav-in 240ms var(--ease-out-quart, ease) forwards;
   animation-delay: calc(var(--ci, 0) * 30ms);
+  transition: border-color 160ms var(--ease-out-quart, ease), background 160ms var(--ease-out-quart, ease);
+}
+.fav-card:hover {
+  border-color: color-mix(in oklch, var(--fc, var(--accent)) 35%, var(--border-default));
+  background: color-mix(in oklch, var(--fc, var(--accent)) 7%, var(--surface-raised));
 }
 @keyframes fav-in { to { opacity: 1; transform: none; } }
 
@@ -337,7 +341,7 @@ onMounted(fetchFavorites)
   color: var(--text-muted);
   transition: color 120ms, background 120ms;
 }
-.fav-remove:hover { color: oklch(64% 0.19 24); background: oklch(14% 0.05 24 / 0.4); }
+.fav-remove:hover { color: var(--error); background: var(--error-surface); }
 .fav-name {
   font-family: var(--font-display); font-size: var(--text-base); font-weight: 700;
   color: var(--text-primary);

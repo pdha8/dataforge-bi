@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useSidebar } from '@/composables/useSidebar'
 import { useAuthStore } from '@/stores/auth'
 import {
@@ -10,9 +10,15 @@ import {
   Brain, Code2, FileCode, UserCircle, Bookmark, FolderOpen, Plug,
 } from 'lucide-vue-next'
 
-const { collapsed, toggle } = useSidebar()
+const { collapsed, mobileOpen, toggle } = useSidebar()
 const route = useRoute()
+const router = useRouter()
 const auth = useAuthStore()
+
+function handleLogout() {
+  auth.logout()
+  router.replace('/login')
+}
 
 type PermKey =
   | 'canManageDataSources'
@@ -111,12 +117,20 @@ const userName = computed(() => {
 </script>
 
 <template>
-  <aside class="sidebar" :class="{ 'sidebar--collapsed': collapsed }" role="navigation" aria-label="Navigation principale">
+  <aside
+    class="sidebar"
+    :class="{
+      'sidebar--collapsed': collapsed,
+      'sidebar--mobile-open': mobileOpen,
+    }"
+    role="navigation"
+    aria-label="Navigation principale"
+  >
 
     <!-- ── Logo ─────────────────────────────────────────── -->
     <div class="sidebar-logo">
       <span class="logo-mark">IBI</span>
-      <span class="sidebar-label logo-name">Integrated BI</span>
+      <span class="sidebar-label logo-name">DataForge BI</span>
     </div>
 
     <!-- ── Navigation ────────────────────────────────────── -->
@@ -159,7 +173,7 @@ const userName = computed(() => {
             <span>Profil</span>
           </RouterLink>
           <span class="user-actions-sep">·</span>
-          <button class="user-logout" @click="auth.logout()" title="Déconnexion">
+          <button class="user-logout" @click="handleLogout" title="Déconnexion">
             <LogOut :size="13" />
             <span>Déconnexion</span>
           </button>
@@ -471,10 +485,48 @@ const userName = computed(() => {
   transform: rotate(180deg);
 }
 
+/* ── Mobile drawer ───────────────────────────────────────── */
+@media (max-width: 768px) {
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 260px;
+    height: 100dvh;
+    transform: translate3d(-100%, 0, 0);
+    transition: transform 280ms var(--ease-out-quart), visibility 0s linear 280ms;
+    z-index: var(--z-modal);
+    box-shadow: var(--shadow-xl);
+    visibility: hidden;
+    pointer-events: none;
+    will-change: transform;
+  }
+  .sidebar--mobile-open {
+    transform: translate3d(0, 0, 0);
+    visibility: visible;
+    pointer-events: auto;
+    transition: transform 280ms var(--ease-out-quart), visibility 0s linear 0s;
+  }
+  /* Inside the drawer, labels always visible regardless of collapsed state */
+  .sidebar .sidebar-label {
+    max-width: 180px;
+    opacity: 1;
+  }
+  /* Hide desktop collapse toggle on mobile */
+  .collapse-btn {
+    display: none;
+  }
+  /* Hide the subtle right border on mobile (drawer has its own shadow) */
+  .sidebar::after {
+    display: none;
+  }
+}
+
 /* ── Reduced motion ──────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   .sidebar-label,
   .collapse-btn,
-  .nav-group-sep { transition-duration: 0.01ms !important; }
+  .nav-group-sep,
+  .sidebar { transition-duration: 0.01ms !important; }
 }
 </style>

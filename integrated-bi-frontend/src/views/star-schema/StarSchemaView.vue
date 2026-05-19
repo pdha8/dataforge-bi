@@ -3,7 +3,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import {
   Star, Plus, Search, Edit, Trash2, Play, Code2, CheckCircle,
   X, Layers, Network, Calculator, GitMerge,
-  Copy, RefreshCw, Archive,
+  Copy, RefreshCw, Archive, AlertCircle,
 } from 'lucide-vue-next'
 import api from '@/api/axios'
 
@@ -172,6 +172,7 @@ const copiedSql = ref(false)
 const showSchemaModal = ref(false)
 const schemaModalMode = ref<'create' | 'edit'>('create')
 const schemaModalLoading = ref(false)
+const schemaModalError = ref<string>('')
 const schemaForm = ref<SchemaForm>({
   name: '',
   description: '',
@@ -334,6 +335,7 @@ async function fetchSchemas() {
 function openCreateSchema() {
   schemaModalMode.value = 'create'
   editingSchemaId.value = null
+  schemaModalError.value = ''
   schemaForm.value = {
     name: '', description: '', schema_type: 'star',
     status: 'draft', grain: 'daily', version: '',
@@ -345,6 +347,7 @@ function openCreateSchema() {
 function openEditSchema(s: DimensionalSchema) {
   schemaModalMode.value = 'edit'
   editingSchemaId.value = s.id
+  schemaModalError.value = ''
   schemaForm.value = {
     name: s.name,
     description: s.description ?? '',
@@ -361,6 +364,7 @@ function openEditSchema(s: DimensionalSchema) {
 async function saveSchema() {
   if (!schemaForm.value.name.trim()) return
   schemaModalLoading.value = true
+  schemaModalError.value = ''
   try {
     if (schemaModalMode.value === 'create') {
       await api.post('/api/star-schema/dimensional-schemas/', schemaForm.value)
@@ -370,7 +374,17 @@ async function saveSchema() {
     showSchemaModal.value = false
     await fetchSchemas()
     await fetchStats()
-  } catch { /* ignore */ } finally {
+  } catch (e: unknown) {
+    const err = e as { response?: { data?: { message?: string; errors?: Record<string, string[] | string> } } }
+    const errs = err?.response?.data?.errors
+    if (errs && typeof errs === 'object') {
+      schemaModalError.value = Object.entries(errs)
+        .map(([k, v]) => `${k} : ${Array.isArray(v) ? v.join(', ') : v}`)
+        .join(' · ')
+    } else {
+      schemaModalError.value = err?.response?.data?.message || 'Erreur lors de l\'enregistrement.'
+    }
+  } finally {
     schemaModalLoading.value = false
   }
 }
@@ -1758,6 +1772,11 @@ onMounted(() => {
             </div>
           </div>
 
+          <div v-if="schemaModalError" class="schema-modal-error" role="alert">
+            <AlertCircle :size="16" />
+            <span>{{ schemaModalError }}</span>
+          </div>
+
           <div class="dialog-footer">
             <button class="btn-ghost" @click="showSchemaModal = false">Annuler</button>
             <button
@@ -2875,6 +2894,20 @@ onMounted(() => {
   border-top: 1px solid var(--border-subtle);
   flex-shrink: 0;
 }
+
+.schema-modal-error {
+  margin: 0 var(--sp-6) var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  background: color-mix(in oklab, var(--danger, #dc2626) 12%, transparent);
+  border: 1px solid color-mix(in oklab, var(--danger, #dc2626) 35%, transparent);
+  border-radius: var(--radius-md);
+  color: var(--danger, #dc2626);
+  font-size: 13px;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+}
+.schema-modal-error span { flex: 1; word-break: break-word; }
 
 /* Dialog transition */
 .dialog-enter-active, .dialog-leave-active { transition: opacity 150ms, transform 150ms; }

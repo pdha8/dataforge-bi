@@ -1,9 +1,9 @@
-import { test, expect, Page } from '@playwright/test'
+﻿import { test, expect, Page } from '@playwright/test'
 
-const LOGIN_EMAIL    = process.env.TEST_USER_EMAIL    ?? 'admin@sotifibre.dz'
-const LOGIN_PASSWORD = process.env.TEST_USER_PASSWORD ?? 'SOTIFibre@2026!'
+const LOGIN_EMAIL    = process.env.TEST_USER_EMAIL    ?? 'admin@dataforge.tech'
+const LOGIN_PASSWORD = process.env.TEST_USER_PASSWORD ?? 'DataForge@2026!'
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 async function login(page: Page) {
   await page.goto('/login')
@@ -22,7 +22,7 @@ function collectConsoleErrors(page: Page): string[] {
   return errors
 }
 
-// ─── Tests ────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 test.describe('Authentification', () => {
   test('La page de login se charge correctement', async ({ page }) => {
@@ -34,7 +34,7 @@ test.describe('Authentification', () => {
     expect(errors.filter(e => !e.includes('favicon'))).toHaveLength(0)
   })
 
-  test('Login réussi redirige vers le dashboard', async ({ page }) => {
+  test('Login rÃ©ussi redirige vers le dashboard', async ({ page }) => {
     await login(page)
     await expect(page).toHaveURL(/\/(dashboard)?$/)
   })
@@ -48,10 +48,10 @@ test.describe('Dashboard', () => {
     await page.goto('/')
     // Attendre que le contenu principal charge (pas de spinner)
     await page.waitForLoadState('networkidle')
-    // Vérifier qu'il y a au moins un élément de contenu
+    // VÃ©rifier qu'il y a au moins un Ã©lÃ©ment de contenu
     const main = page.locator('main, .dash-header, [class*="dashboard"]')
     await expect(main.first()).toBeVisible()
-    // Filtrer les erreurs bénignes (extensions navigateur, favicon)
+    // Filtrer les erreurs bÃ©nignes (extensions navigateur, favicon)
     const realErrors = errors.filter(e =>
       !e.includes('favicon') &&
       !e.includes('chrome-extension') &&
@@ -61,18 +61,18 @@ test.describe('Dashboard', () => {
   })
 })
 
-test.describe('Sources de données – cohérence tableau', () => {
+test.describe('Sources de donnÃ©es â€“ cohÃ©rence tableau', () => {
   test.beforeEach(async ({ page }) => { await login(page) })
 
   test('La page Sources charge et affiche le bon nombre de colonnes', async ({ page }) => {
     await page.goto('/sources')
     await page.waitForLoadState('networkidle')
 
-    // Vérifier que la page est bien chargée (titre ou header visible)
+    // VÃ©rifier que la page est bien chargÃ©e (titre ou header visible)
     await expect(page.locator('.page-hd, [class*="page-hd"]').first()).toBeVisible({ timeout: 8_000 })
 
-    // S'il y a un tableau de tables ouvert dans le panneau détail,
-    // il doit avoir exactement 3 colonnes : Nom | Lignes | Dernière MAJ
+    // S'il y a un tableau de tables ouvert dans le panneau dÃ©tail,
+    // il doit avoir exactement 3 colonnes : Nom | Lignes | DerniÃ¨re MAJ
     const detailTable = page.locator('.detail-table, table').first()
     const isVisible = await detailTable.isVisible()
     if (isVisible) {
@@ -84,31 +84,31 @@ test.describe('Sources de données – cohérence tableau', () => {
   })
 })
 
-test.describe('Pipelines ETL – cohérence tableau', () => {
+test.describe('Pipelines ETL â€“ cohÃ©rence tableau', () => {
   test.beforeEach(async ({ page }) => { await login(page) })
 
   test('La page Pipelines charge et le header de colonnes est visible', async ({ page }) => {
     await page.goto('/pipelines')
     await page.waitForLoadState('networkidle')
 
-    // Les en-têtes de colonnes de la liste
-    // Design : Nom | Source | Destination | Schedule | Statut | Dernière exéc.
+    // Les en-tÃªtes de colonnes de la liste
+    // Design : Nom | Source | Destination | Schedule | Statut | DerniÃ¨re exÃ©c.
     const colHeaders = page.locator('.col-headers')
     const visible = await colHeaders.isVisible()
     if (visible) {
       const cols = colHeaders.locator('> *')
       const count = await cols.count()
-      // Le design prévoit entre 4 et 6 colonnes visibles
+      // Le design prÃ©voit entre 4 et 6 colonnes visibles
       expect(count).toBeGreaterThanOrEqual(4)
       expect(count).toBeLessThanOrEqual(6)
     }
   })
 
-  test("Le tableau d'exécutions a 5 colonnes (Statut, Démarré, Durée, Lignes, Erreurs)", async ({ page }) => {
+  test("Le tableau d'exÃ©cutions a 5 colonnes (Statut, DÃ©marrÃ©, DurÃ©e, Lignes, Erreurs)", async ({ page }) => {
     await page.goto('/pipelines')
     await page.waitForLoadState('networkidle')
 
-    // Cliquer sur le premier pipeline pour ouvrir le panneau détail
+    // Cliquer sur le premier pipeline pour ouvrir le panneau dÃ©tail
     const firstCard = page.locator('[class*="pipeline-card"], .pl-card').first()
     const cardVisible = await firstCard.isVisible()
     if (cardVisible) {
@@ -124,13 +124,13 @@ test.describe('Pipelines ETL – cohérence tableau', () => {
   })
 })
 
-test.describe('Navigation générale', () => {
+test.describe('Navigation gÃ©nÃ©rale', () => {
   test.beforeEach(async ({ page }) => { await login(page) })
 
   const routes = [
     { path: '/sources',         label: 'Sources'         },
     { path: '/pipelines',       label: 'Pipelines'       },
-    { path: '/executions',      label: 'Exécutions'      },
+    { path: '/executions',      label: 'ExÃ©cutions'      },
     { path: '/warehouse',       label: 'Data Warehouse'  },
     { path: '/kpis',            label: 'KPIs'            },
     { path: '/notifications',   label: 'Notifications'   },
@@ -139,7 +139,7 @@ test.describe('Navigation générale', () => {
   for (const { path, label } of routes) {
     test(`La page "${label}" charge sans erreur HTTP 4xx/5xx`, async ({ page }) => {
       const errors: string[] = []
-      page.on('requestfailed', req => errors.push(`${req.url()} – ${req.failure()?.errorText}`))
+      page.on('requestfailed', req => errors.push(`${req.url()} â€“ ${req.failure()?.errorText}`))
       page.on('response', res => {
         if (res.status() >= 400 && res.url().includes('/api/')) {
           errors.push(`API ${res.status()} sur ${res.url()}`)
@@ -150,7 +150,7 @@ test.describe('Navigation générale', () => {
       // Signaler uniquement les vraies erreurs HTTP 5xx de l'API
       // Exclut : ERR_ABORTED (race conditions de navigation), URLs contenant "5"
       const serverErrors = errors.filter(e => /^API 5\d\d/.test(e))
-      expect(serverErrors, `Erreurs 5xx détectées:\n${serverErrors.join('\n')}`).toHaveLength(0)
+      expect(serverErrors, `Erreurs 5xx dÃ©tectÃ©es:\n${serverErrors.join('\n')}`).toHaveLength(0)
     })
   }
 })

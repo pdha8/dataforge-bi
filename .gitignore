@@ -23,11 +23,11 @@ Integrated_BI_backend_laravel_backup/
 Integrated_BI_frontend_vue/node_modules/
 Integrated_BI_frontend_vue/dist/
 
-# ── Vue.js / Frontend (nouveau - integrated-bi-frontend) ────
-integrated-bi-frontend/node_modules/
-integrated-bi-frontend/dist/
-integrated-bi-frontend/.vite/
-integrated-bi-frontend/*.local
+# ── Vue.js / Frontend (DataForge) ────────────────────────────
+dataforge_frontend/node_modules/
+dataforge_frontend/dist/
+dataforge_frontend/.vite/
+dataforge_frontend/*.local
 
 # ── IDE ─────────────────────────────────────────────────────
 .vscode/
@@ -57,3 +57,49 @@ _tmp_Integrated_BI/
 *.pdf
 *.exe
 *.webp
+
+# ── TestSprite ──────────────────────────────────────────────
+testsprite_tests/
+PRD_TestSprite.md
+
+# ── Fichiers exclus définitivement (cleanup 2026-05-17) ──────
+# Scripts dev temporaires
+fix_admin.py
+fix_cleanup.py
+fix_conn.py
+fix_kpi.py
+fix_seed_import.py
+fix_urls.py
+test_api.py
+test_api_script.py
+update_seed_and_sandbox.py
+
+# Dumps DB
+sotifibre_db/
+*.sql.gz
+*.dump
+
+# Images à la racine (les conserver dans docs/ si besoin)
+/*.png
+/*.jpg
+/*.jpeg
+/*.gif
+/*.webp
+/*.avif
+/*.svg
+
+# Notes privées et secrets
+mot de passe*.txt
+mot_de_passe*.txt
+*password*.txt
+les prompts pour les*
+
+# Chapitres PFE (docs locaux uniquement)
+*.docx
+*.doc
+*.pdf
+
+# Scripts ad-hoc (supprimés)
+
+# Claude Code local settings
+.claude/

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-SOTIFibre BI Platform - Script de peuplement des donnees de test
+DataForge BI Platform - Script de peuplement des donnees de test
 Nomenclature industrielle : SRC_ / DSB_ / ETL_ / KPI_
 Usage: python manage.py shell < seed_data.py
 """
@@ -22,7 +22,7 @@ if not hasattr(cache, 'delete_pattern'):
     cache.delete_pattern = lambda *a, **kw: None
 
 print("\n" + "=" * 60)
-print("  SOTIFibre BI Platform - Seeding des donnees de test")
+print("  DataForge BI Platform - Seeding des donnees de test")
 print("=" * 60)
 
 from apps.users.models import User, Team
@@ -30,6 +30,7 @@ from apps.data_sources.models import DataSource, DataTable
 from apps.data_warehouse.models import (
     DataWarehouseSchema, DataWarehouseTable,
     FactTable, DimensionTable, Measure,
+    DataWarehouseLog, DataWarehouseMetric, AggregationTable,
 )
 from apps.etl_engine.models import ETLPipeline, ExecutionLog
 from apps.star_schema.models import DimensionalSchema
@@ -41,23 +42,32 @@ from apps.notifications.models import Notification
 # ---------------------------------------------------------
 print("\n[0/14] Nettoyage des donnees existantes...")
 
-Favorite.objects.all().delete()
-Notification.objects.all().delete()
-Report.objects.all().delete()
-Widget.objects.all().delete()
-KPI.objects.all().delete()
-Dashboard.objects.all().delete()
-DimensionalSchema.objects.all().delete()
-Measure.objects.all().delete()
-ExecutionLog.objects.all().delete()
-ETLPipeline.objects.all().delete()
-DataWarehouseTable.objects.all().delete()
-DataWarehouseSchema.objects.all().delete()
-DataTable.objects.all().delete()
-DataSource.objects.all().delete()
-Team.objects.all().delete()
+# Nettoyage TRUNCATE CASCADE : bypass les signaux post_delete qui créent
+# des logs en boucle (data_source_logs, data_warehouse_logs, etc.) et causent
+# des ForeignKeyViolation au commit. PostgreSQL CASCADE gère les FK enfants
+# automatiquement, sans déclencher les signaux Django.
+from django.db import connection
+with connection.cursor() as cursor:
+    cursor.execute("""
+        TRUNCATE TABLE
+            data_sources,
+            data_warehouse_schemas,
+            etl_pipelines,
+            dimensional_schemas,
+            dashboards,
+            kpis,
+            widgets,
+            reports,
+            favorites,
+            notifications,
+            ml_models,
+            teams
+        RESTART IDENTITY CASCADE;
+    """)
+print("  [OK] Tables métier vidées (TRUNCATE CASCADE)")
+# User: on garde la table mais on supprime les non-admin (à part le superuser système)
 User.objects.filter(is_superuser=False).delete()
-User.objects.exclude(email='admin@admin.com').filter(is_superuser=True).delete()
+User.objects.exclude(email='admin@dataforge.tech').filter(is_superuser=True).delete()
 print("  [OK] Donnees existantes supprimees")
 
 # ---------------------------------------------------------
@@ -72,16 +82,16 @@ def make_user(email, username, first, last, role, dept, title, superuser=False):
         is_verified=True, is_staff=superuser, is_superuser=superuser,
     ))
     if created:
-        u.set_password('SOTIFibre@2026!')
+        u.set_password('DataForge@2026!')
         u.save()
         print(f"  [OK] {email}")
     return u
 
-admin_user    = make_user('admin@sotifibre.dz',       'admin_soti',   'Admin',   'SOTIFibre', 'superadmin',   'Direction IT',      'Administrateur BI',      superuser=True)
-dev_user      = make_user('dev.bi@sotifibre.dz',      'dev_bi',       'Karim',   'Meziane',   'bi_developer', 'Departement BI',    'Developpeur BI')
-analyst_user  = make_user('analyste@sotifibre.dz',    'analyste_bi',  'Nadia',   'Brahim',    'bi_analyst',   'Departement BI',    'Analyste BI')
-director_user = make_user('direction@sotifibre.dz',   'direction',    'Mohamed', 'Amrani',    'bi_consumer',  'Direction Generale', 'Directeur General')
-tech_user     = make_user('technicien@sotifibre.dz',  'technicien',   'Rachid',  'Hamidi',    'viewer',       'Technique',         'Technicien Reseau')
+admin_user    = make_user('admin@dataforge.tech',       'admin_soti',   'Admin',   'DataForge', 'superadmin',   'Direction IT',      'Administrateur BI',      superuser=True)
+dev_user      = make_user('dev.bi@dataforge.tech',      'dev_bi',       'Karim',   'Meziane',   'bi_developer', 'Departement BI',    'Developpeur BI')
+analyst_user  = make_user('analyste@dataforge.tech',    'analyste_bi',  'Nadia',   'Brahim',    'bi_analyst',   'Departement BI',    'Analyste BI')
+director_user = make_user('direction@dataforge.tech',   'direction',    'Mohamed', 'Amrani',    'bi_consumer',  'Direction Generale', 'Directeur General')
+tech_user     = make_user('technicien@dataforge.tech',  'technicien',   'Rachid',  'Hamidi',    'viewer',       'Technique',         'Technicien Reseau')
 
 # ---------------------------------------------------------
 # 2. EQUIPES
@@ -89,7 +99,7 @@ tech_user     = make_user('technicien@sotifibre.dz',  'technicien',   'Rachid', 
 print("\n[2/14] Equipes...")
 
 team_bi, c = Team.objects.get_or_create(name='Equipe BI Core', defaults=dict(
-    description='Equipe centrale BI - developpement et maintenance des tableaux de bord et KPIs SOTIFibre.',
+    description='Equipe centrale BI - developpement et maintenance des tableaux de bord et KPIs DataForge.',
     team_lead=admin_user,
 ))
 if c:
@@ -116,7 +126,7 @@ def make_source(name, **kw):
 
 src_pg = make_source(
     'SRC_Production_PostgreSQL',
-    description='Base PostgreSQL principale - clients, contrats, equipements reseau et historique incidents SOTIFibre.',
+    description='Base PostgreSQL principale - clients, contrats, equipements reseau et historique incidents DataForge.',
     source_type='postgresql', status='active', database_type='postgresql',
     host='192.168.224.128', port=5432, database_name='sotifibre_db',
     schema_name='public', username='sotifibre_admin',
@@ -185,7 +195,7 @@ src_meteo = make_source(
 print("\n[4/14] Tables de donnees...")
 
 tables_spec = [
-    ('clients', 'Abonnes SOTIFibre avec offres fibre actives', 42380, [
+    ('clients', 'Abonnes DataForge avec offres fibre actives', 42380, [
         {'name': 'id', 'type': 'integer', 'nullable': False},
         {'name': 'nom', 'type': 'varchar(100)', 'nullable': False},
         {'name': 'prenom', 'type': 'varchar(100)', 'nullable': False},
@@ -267,7 +277,7 @@ print("\n[5/14] Schema Data Warehouse...")
 dw_schema, c = DataWarehouseSchema.objects.get_or_create(
     name='sotifibre_dw',
     defaults=dict(
-        description='Entrepot de donnees centralise SOTIFibre - schema principal alimente par les pipelines ETL.',
+        description='Entrepot de donnees centralise DataForge - schema principal alimente par les pipelines ETL.',
         owner=admin_user, is_active=True, default_compression=True,
         tags=['production', 'principal', 'fibre'],
         table_count=8, size_bytes=2_450_000_000,
@@ -303,7 +313,7 @@ for tname, grain, tdesc, trows in fact_specs:
 
 dim_specs = [
     ('dim_temps',        'slowly_changing', 'Dimension temps - hierarchie date et heure',              3653),
-    ('dim_client',       'slowly_changing', 'Dimension clients SOTIFibre - attributs abonnes',         42380),
+    ('dim_client',       'slowly_changing', 'Dimension clients DataForge - attributs abonnes',         42380),
     ('dim_equipement',   'conformed',       'Dimension equipements reseau - OLT, ONT, switches',       3840),
     ('dim_localisation', 'conformed',       'Dimension geographique - wilayas, dairas, communes',      1542),
     ('dim_technicien',   'slowly_changing', 'Dimension techniciens terrain - personnel habilite',       248),
@@ -605,7 +615,7 @@ print("\n[11/14] Tableaux de bord...")
 dashboards_spec = [
     dict(slug='dsb-operationnel-reseau',
          name='DSB_Operationnel_Reseau',
-         description='Vue operationnelle temps reel du reseau fibre SOTIFibre : incidents actifs, disponibilite, bande passante et alertes.',
+         description='Vue operationnelle temps reel du reseau fibre DataForge : incidents actifs, disponibilite, bande passante et alertes.',
          dashboard_type='operational', theme='dark',
          refresh_frequency='5min', auto_refresh=True,
          category='Reseau', access_level='team', view_count=1284,
@@ -740,7 +750,7 @@ print("\n[13/14] KPIs...")
 kpis_spec = [
     (db_op,  'KPI_Disponibilite_Reseau',        'percentage', schema_inc,  measures['Taux Resolution Incidents'],
      99.2, 99.0, 99.5, 95.0, '%', 1, 'up',
-     'Disponibilite actuelle du reseau fibre SOTIFibre'),
+     'Disponibilite actuelle du reseau fibre DataForge'),
     (db_op,  'KPI_Incidents_Actifs',             'number',     schema_inc,  measures['Nombre Incidents'],
      12.0, None, 20.0, 30.0, 'Incidents', 0, 'down',
      'Nombre incidents reseau en cours de traitement'),
@@ -752,7 +762,7 @@ kpis_spec = [
      'Duree moyenne de resolution incident reseau'),
     (db_kpi, 'KPI_Clients_Actifs_Fibre',         'number',     schema_int,  None,
      42380.0, 45000.0, None, None, 'Abonnes', 0, 'up',
-     'Nombre total abonnes fibre actifs chez SOTIFibre'),
+     'Nombre total abonnes fibre actifs chez DataForge'),
     (db_kpi, 'KPI_Satisfaction_Client',          'percentage', schema_int,  None,
      87.3, 90.0, 85.0, 75.0, '%', 1, 'up',
      'Score de satisfaction client - enquetes mensuelles'),
@@ -811,19 +821,19 @@ print("\n[14/14] Rapports, notifications, favoris...")
 reports_spec = [
     (db_kpi, 'Rapport Mensuel Performances Reseau',
      'pdf', '0 7 1 * *',
-     ['direction@sotifibre.dz', 'admin@sotifibre.dz', 'analyste@sotifibre.dz'],
+     ['direction@dataforge.tech', 'admin@dataforge.tech', 'analyste@dataforge.tech'],
      ['mensuel', 'performance']),
     (db_inc, 'Rapport Hebdomadaire Incidents Reseau',
      'pdf', '0 8 * * 1',
-     ['admin@sotifibre.dz', 'analyste@sotifibre.dz'],
+     ['admin@dataforge.tech', 'analyste@dataforge.tech'],
      ['hebdomadaire', 'incidents']),
     (db_op, 'Rapport Quotidien Operationnel',
      'pdf', '0 18 * * *',
-     ['admin@sotifibre.dz', 'dev.bi@sotifibre.dz'],
+     ['admin@dataforge.tech', 'dev.bi@dataforge.tech'],
      ['quotidien', 'operationnel']),
     (db_kpi, 'Export KPIs Trimestriels Excel',
      'excel', '0 9 1 1,4,7,10 *',
-     ['direction@sotifibre.dz'],
+     ['direction@dataforge.tech'],
      ['trimestriel', 'kpi']),
 ]
 
@@ -908,6 +918,6 @@ print(f"  KPIs             : {KPI.objects.count()}")
 print(f"  Rapports         : {Report.objects.count()}")
 print(f"  Notifications    : {Notification.objects.count()}")
 print("=" * 60)
-print("  Connexion : admin@sotifibre.dz / SOTIFibre@2026!")
+print("  Connexion : admin@dataforge.tech / DataForge@2026!")
 print("  Admin Django : admin@admin.com / admin123456")
 print("=" * 60 + "\n")

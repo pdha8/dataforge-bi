@@ -1,0 +1,132 @@
+﻿# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+#  Render Blueprint â€” DataForge BI Platform
+#  Doc : https://render.com/docs/blueprint-spec
+#
+#  DÃ©ployer :
+#  1) Pousser ce fichier sur GitHub
+#  2) https://dashboard.render.com/blueprints â†’ "New Blueprint Instance"
+#  3) Connecter le repo, Render lit ce fichier et crÃ©e tout automatiquement
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+databases:
+  - name: dataforge-db
+    databaseName: dataforge
+    user: dataforge
+    plan: free            # Passe Ã  "starter" en payant pour des perfs rÃ©elles
+    region: frankfurt     # Plus proche de la Tunisie (latence â†“)
+
+services:
+  # â”€â”€â”€â”€â”€ Backend Django â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  - type: web
+    name: dataforge-api
+    runtime: python
+    plan: free
+    region: frankfurt
+    rootDir: dataforge_backend
+    buildCommand: "./build.sh"
+    # âš ï¸ Plan free Render = 512Mo RAM. ML libs (prophet/xgboost/sklearn) sont lourds.
+    # â†’ 1 worker, --preload (fork aprÃ¨s imports = mÃ©moire partagÃ©e), recyclage rÃ©gulier.
+    startCommand: "gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 120 --preload --max-requests 500 --max-requests-jitter 50"
+    healthCheckPath: /api/health/
+    autoDeploy: true
+    # âš ï¸ Ne change PAS startCommand dans le dashboard Render.
+    # Le rootDir est `dataforge_backend`, donc `config.wsgi:application` est CORRECT.
+    # `dataforge_backend.wsgi:application` est FAUX â†’ ModuleNotFoundError.
+
+    envVars:
+      # â”€â”€â”€ SÃ©curitÃ© / Django â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings.production
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - key: SECRET_KEY
+        generateValue: true       # Render gÃ©nÃ¨re une clÃ© alÃ©atoire
+      - key: DEBUG
+        value: "False"
+      - key: ALLOWED_HOSTS
+        value: ".onrender.com"    # Couvre tous les sous-domaines Render
+
+      # â”€â”€â”€ Base de donnÃ©es : injection automatique â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      - key: DATABASE_URL
+        fromDatabase:
+          name: dataforge-db
+          property: connectionString
+
+      # â”€â”€â”€ CORS / CSRF : Ã  adapter quand le frontend est dÃ©ployÃ© â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      - key: CORS_ALLOWED_ORIGINS
+        value: "https://dataforge-app.onrender.com"
+      - key: CSRF_TRUSTED_ORIGINS
+        value: "https://dataforge-app.onrender.com,https://*.onrender.com"
+      - key: FRONTEND_URL
+        value: "https://dataforge-app.onrender.com"
+      - key: BACKEND_URL
+        sync: false               # Ã€ renseigner manuellement aprÃ¨s le 1er deploy
+
+      # â”€â”€â”€ JWT lifetimes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      - key: ACCESS_TOKEN_LIFETIME_MINUTES
+        value: "60"
+      - key: REFRESH_TOKEN_LIFETIME_DAYS
+        value: "7"
+
+      # â”€â”€â”€ Superuser auto-crÃ©Ã© par build.sh au 1er dÃ©ploiement â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      # âš ï¸ Renseigner DJANGO_SUPERUSER_PASSWORD manuellement dans le dashboard
+      #    (marquÃ© sync:false pour Ã©viter l'exposition dans le yaml committÃ©)
+      - key: DJANGO_SUPERUSER_EMAIL
+        value: "admin@dataforge.tech"
+      - key: DJANGO_SUPERUSER_USERNAME
+        value: "admin"
+      - key: DJANGO_SUPERUSER_PASSWORD
+        sync: false
+
+      # â”€â”€â”€ Email (optionnel â€” laisse vide si non utilisÃ©) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      - key: SENDGRID_API_KEY
+        sync: false
+      - key: DEFAULT_FROM_EMAIL
+        value: "noreply@dataforge.tech"
+
+      # â”€â”€â”€ Twilio / Slack / Grok (optionnel) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: SLACK_BOT_TOKEN
+        sync: false
+      - key: GROK_API_KEY
+        sync: false
+
+  # â”€â”€â”€â”€â”€ Frontend Vue 3 (static site) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  - type: web
+    name: dataforge-app
+    runtime: static
+    region: frankfurt
+    rootDir: dataforge_frontend
+    # âš ï¸ Vite 8 utilise rolldown (Rust) + a un bug npm sur optional deps Linux.
+    # â†’ npm install (pas npm ci) + Node 22.12+ obligatoire (Vite 8 minimum).
+    buildCommand: "npm install --include=optional && npm run build"
+    staticPublishPath: ./dist
+    autoDeploy: true
+    pullRequestPreviewsEnabled: false
+
+    envVars:
+      # âš ï¸ Le code lit `import.meta.env.VITE_API_URL` (et PAS VITE_API_BASE_URL).
+      - key: VITE_API_URL
+        value: "https://dataforge-api.onrender.com"
+      # âš ï¸ Vite 8 exige Node 20.19+ ou 22.12+. 20.18.0 plante (rolldown native binding).
+      - key: NODE_VERSION
+        value: "22.12.0"
+
+    headers:
+      # Cache long pour les assets hashÃ©s Vite
+      - path: /assets/*
+        name: Cache-Control
+        value: "public, max-age=31536000, immutable"
+      # Pas de cache pour index.html (le SPA shell)
+      - path: /index.html
+        name: Cache-Control
+        value: "no-cache, no-store, must-revalidate"
+
+    routes:
+      # Routage SPA : toutes les routes inconnues â†’ index.html (Vue Router prend le relais)
+      - type: rewrite
+        source: /*
+        destination: /index.html

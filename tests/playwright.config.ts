@@ -1,4 +1,4 @@
-import { defineConfig, devices } from '@playwright/test'
+﻿import { defineConfig, devices } from '@playwright/test'
 
 const BASE_URL = process.env.FRONTEND_URL ?? 'http://localhost:5173'
 
