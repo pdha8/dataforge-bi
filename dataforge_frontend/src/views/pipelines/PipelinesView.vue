@@ -207,9 +207,18 @@ const dataSources = ref<DataSourceOption[]>([])
 
 async function fetchDataSources() {
   try {
-    const { data } = await api.get('/api/data-sources/sources/', { params: { per_page: 500 } })
-    const rows = Array.isArray(data?.results) ? data.results : Array.isArray(data) ? data : []
-    dataSources.value = rows.map((s: any) => ({ id: s.id, name: s.name, source_type: s.source_type || '' }))
+    const [srcRes, fileRes] = await Promise.all([
+      api.get('/api/data-sources/sources/', { params: { per_page: 500 } }),
+      api.get('/api/data-sources/files/',   { params: { per_page: 500 } }).catch(() => ({ data: { results: [] } })),
+    ])
+    const srcRows  = Array.isArray(srcRes.data?.results) ? srcRes.data.results : Array.isArray(srcRes.data) ? srcRes.data : []
+    const fileRows = Array.isArray(fileRes.data?.results) ? fileRes.data.results : Array.isArray(fileRes.data) ? fileRes.data : []
+    const sources = srcRows.map((s: any) => ({ id: s.id, name: s.name, source_type: s.source_type || '' }))
+    const seen = new Set(sources.map((s: any) => s.id))
+    const fileEntries = fileRows
+      .filter((f: any) => f.data_source && !seen.has(f.data_source))
+      .map((f: any) => ({ id: f.data_source, name: f.name || f.original_name || f.file, source_type: 'file' }))
+    dataSources.value = [...sources, ...fileEntries]
   } catch { dataSources.value = [] }
 }
 

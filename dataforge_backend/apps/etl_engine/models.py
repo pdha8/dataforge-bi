@@ -470,17 +470,35 @@ class Transformation(BaseModel):
     def __str__(self):
         return f"{self.pipeline.name} - {self.name} (étape {self.order})"
     
+    def move_up(self):
+        previous = Transformation.objects.filter(
+            pipeline=self.pipeline, order__lt=self.order
+        ).order_by('-order').first()
+        if previous:
+            previous.order, self.order = self.order, previous.order
+            previous.save(update_fields=['order'])
+            self.save(update_fields=['order'])
+
+    def move_down(self):
+        next_t = Transformation.objects.filter(
+            pipeline=self.pipeline, order__gt=self.order
+        ).order_by('order').first()
+        if next_t:
+            next_t.order, self.order = self.order, next_t.order
+            next_t.save(update_fields=['order'])
+            self.save(update_fields=['order'])
+
     def update_metrics(self, duration_ms, success=True):
         """Met à jour les métriques de la transformation"""
         self.execution_count += 1
         self.last_duration_ms = duration_ms
-        
+
         total_time = self.avg_duration_ms * (self.execution_count - 1)
         self.avg_duration_ms = (total_time + duration_ms) / self.execution_count
-        
+
         if not success:
             self.error_count += 1
-        
+
         self.save(update_fields=[
             'execution_count', 'last_duration_ms', 'avg_duration_ms', 'error_count'
         ])

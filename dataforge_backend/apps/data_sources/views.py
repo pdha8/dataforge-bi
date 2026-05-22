@@ -557,12 +557,23 @@ class DataSourceFileViewSet(viewsets.ModelViewSet):
     ordering = ['-created_at']
 
     def perform_create(self, serializer):
-        import os
         file = serializer.validated_data.get('file')
         original_name = file.name if file else ''
+        data_source = serializer.validated_data.get('data_source')
+        if not data_source and file:
+            ext = original_name.rsplit('.', 1)[-1].lower() if '.' in original_name else 'csv'
+            type_map = {'xlsx': 'excel', 'xls': 'excel', 'csv': 'csv', 'json': 'json',
+                        'xml': 'xml', 'parquet': 'parquet', 'tsv': 'csv', 'yaml': 'json', 'yml': 'json'}
+            source_type = type_map.get(ext, 'csv')
+            data_source = DataSource.objects.create(
+                name=f"Fichier : {original_name}",
+                source_type=source_type,
+                created_by=self.request.user,
+            )
         serializer.save(
             uploaded_by=self.request.user,
             original_name=original_name,
+            data_source=data_source,
         )
     
     @action(detail=True, methods=['post'])

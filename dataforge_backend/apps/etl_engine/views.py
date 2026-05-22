@@ -187,6 +187,44 @@ class ETLPipelineViewSet(viewsets.ModelViewSet):
             f"Statut du pipeline changé de {old_status} à {new_status}"
         )
     
+    @action(detail=True, methods=['get'])
+    def dependencies(self, request, pk=None):
+        """Liste les dépendances du pipeline"""
+        pipeline = self.get_object()
+        deps = pipeline.dependencies.all()
+        serializer = ETLPipelineSerializer(deps, many=True)
+        return success_response(serializer.data, "Dépendances récupérées")
+
+    @action(detail=True, methods=['post'])
+    def add_dependency(self, request, pk=None):
+        """Ajoute une dépendance au pipeline"""
+        pipeline = self.get_object()
+        dep_id = request.data.get('dependency_id')
+        if not dep_id:
+            return error_response("dependency_id requis", status_code=status.HTTP_400_BAD_REQUEST)
+        try:
+            dep = ETLPipeline.objects.get(pk=dep_id)
+        except ETLPipeline.DoesNotExist:
+            return not_found_response("Pipeline dépendance non trouvé")
+        if dep.id == pipeline.id:
+            return error_response("Un pipeline ne peut pas dépendre de lui-même", status_code=status.HTTP_400_BAD_REQUEST)
+        pipeline.dependencies.add(dep)
+        return success_response(None, "Dépendance ajoutée")
+
+    @action(detail=True, methods=['post'])
+    def remove_dependency(self, request, pk=None):
+        """Supprime une dépendance du pipeline"""
+        pipeline = self.get_object()
+        dep_id = request.data.get('dependency_id')
+        if not dep_id:
+            return error_response("dependency_id requis", status_code=status.HTTP_400_BAD_REQUEST)
+        try:
+            dep = ETLPipeline.objects.get(pk=dep_id)
+        except ETLPipeline.DoesNotExist:
+            return not_found_response("Pipeline dépendance non trouvé")
+        pipeline.dependencies.remove(dep)
+        return success_response(None, "Dépendance supprimée")
+
     @action(detail=False, methods=['get'])
     def stats(self, request):
         """Statistiques globales des pipelines"""
