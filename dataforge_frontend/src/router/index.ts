@@ -40,6 +40,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'visualizations', name: 'visualizations', component: () => import('@/views/visualizations/VisualizationsView.vue') },
       { path: 'dashboards', name: 'dashboards', component: () => import('@/views/dashboards/DashboardsView.vue') },
       { path: 'kpis', name: 'kpis', component: () => import('@/views/kpis/KpisView.vue') },
+      { path: 'kpis/:id', name: 'kpi-detail', component: () => import('@/views/kpis/KpiDetailView.vue') },
       { path: 'reports', name: 'reports', component: () => import('@/views/reports/ReportsView.vue') },
       { path: 'notifications', name: 'notifications', component: () => import('@/views/notifications/NotificationsView.vue') },
       { path: 'executions', name: 'executions', component: () => import('@/views/executions/ExecutionsView.vue') },

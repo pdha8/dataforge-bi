@@ -607,7 +607,11 @@ onMounted(() => { fetchKpis(); fetchPickerData() })
             </div>
 
             <!-- KPI name -->
-            <h3 class="kpi-name" :title="kpi.name">{{ kpi.name }}</h3>
+            <RouterLink
+              class="kpi-name"
+              :to="{ name: 'kpi-detail', params: { id: kpi.id } }"
+              :title="kpi.name"
+            >{{ kpi.name }}</RouterLink>
             <p v-if="kpi.description" class="kpi-desc">{{ kpi.description }}</p>
 
             <!-- Value + trend -->
@@ -712,7 +716,11 @@ onMounted(() => { fetchKpis(); fetchPickerData() })
           >
             <!-- Name -->
             <div class="list-name-cell">
-              <span class="list-name">{{ kpi.name }}</span>
+              <RouterLink
+                class="list-name"
+                :to="{ name: 'kpi-detail', params: { id: kpi.id } }"
+                :title="kpi.name"
+              >{{ kpi.name }}</RouterLink>
               <span v-if="kpi.description" class="list-desc">{{ kpi.description }}</span>
             </div>
 
@@ -1229,11 +1237,15 @@ onMounted(() => { fetchKpis(); fetchPickerData() })
 
 /* KPI name */
 .kpi-name {
+  display: block;
   font-family: var(--font-display);
   font-size: var(--text-base); font-weight: 700;
   color: var(--text-primary); letter-spacing: -0.01em; line-height: 1.3;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  text-decoration: none;
+  transition: color var(--duration-fast) var(--ease-out-quart);
 }
+.kpi-name:hover { color: var(--accent); }
 
 .kpi-desc {
   font-size: var(--text-xs); color: var(--text-secondary);
@@ -1405,7 +1417,8 @@ onMounted(() => { fetchKpis(); fetchPickerData() })
 .list-row--at_risk  { background: oklch(12% 0.02 80 / 0.3); }
 
 .list-name-cell { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
-.list-name { font-size: var(--text-sm); font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.list-name { display: block; font-size: var(--text-sm); font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-decoration: none; transition: color var(--duration-fast) var(--ease-out-quart); }
+.list-name:hover { color: var(--accent); }
 .list-desc { font-size: var(--text-xs); color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .list-value {
