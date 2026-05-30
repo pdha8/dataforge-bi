@@ -9,6 +9,7 @@ import {
   ChevronLeft, LogOut, Bell, FileText, Activity, Star,
   Brain, Code2, FileCode, UserCircle, Bookmark, FolderOpen, Plug,
 } from 'lucide-vue-next'
+import BrandMark from '@/components/brand/BrandMark.vue'
 
 const { collapsed, mobileOpen, toggle } = useSidebar()
 const route = useRoute()
@@ -129,7 +130,7 @@ const userName = computed(() => {
 
     <!-- ── Logo ─────────────────────────────────────────── -->
     <div class="sidebar-logo">
-      <span class="logo-mark">IBI</span>
+      <span class="logo-mark"><BrandMark :size="26" label="DataForge BI" /></span>
       <span class="sidebar-label logo-name">DataForge BI</span>
     </div>
 
@@ -245,11 +246,9 @@ const userName = computed(() => {
 }
 
 .logo-mark {
-  font-family: var(--font-display);
-  font-size: 1.25rem;
-  font-weight: 800;
-  color: var(--accent);
-  letter-spacing: -0.01em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
   line-height: 1;
 }

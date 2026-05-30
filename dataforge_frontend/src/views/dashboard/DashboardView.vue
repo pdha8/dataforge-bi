@@ -10,6 +10,7 @@ import {
 } from 'chart.js'
 import { Line, Bar, Doughnut } from 'vue-chartjs'
 import api from '@/api/axios'
+import { CHART, CHART_SOFT, SEMANTIC } from '@/design/tokens'
 import {
   TrendingUp, TrendingDown, Minus,
   RefreshCcw, Activity,
@@ -77,19 +78,22 @@ const markingAllRead = ref(false)
 const markingReadId  = ref<string | number | null>(null)
 
 // ── Chart palette ─────────────────────────────────────────
+// Sourced from the DataForge design tokens (src/design/tokens.ts)
+// so charts stay in lockstep with the rest of the design system.
 const C = {
-  amber:      '#d4922a',
-  amberFill:  'rgba(212,146,42,0.10)',
-  teal:       '#2ab4a0',
-  tealFill:   'rgba(42,180,160,0.08)',
-  violet:     '#9b72d4',
-  red:        '#e05252',
-  muted:      '#6b7494',
-  grid:       '#1e2336',
-  text:       '#6b7494',
-  textPri:    '#e8dcc8',
-  tipBg:      '#1c2030',
-  tipBorder:  '#2a2f45',
+  amber:      CHART.c1,
+  amberFill:  CHART_SOFT.c1,
+  blue:       CHART.c2,
+  blueFill:   CHART_SOFT.c2,
+  green:      CHART.c3,
+  violet:     CHART.c4,
+  red:        SEMANTIC.error,
+  muted:      '#5C6B7C',
+  grid:       'oklch(30% 0.015 255)',
+  text:       '#8492A2',
+  textPri:    '#F1E8DC',
+  tipBg:      '#1A232E',
+  tipBorder:  '#28333F',
 }
 
 const tooltipDefaults = {
@@ -123,11 +127,11 @@ const lineData = {
     {
       label: 'Pipelines exécutés',
       data: [120,135,128,162,148,170,185,158,192,204,178,220],
-      borderColor: C.teal,
-      backgroundColor: C.tealFill,
+      borderColor: C.blue,
+      backgroundColor: C.blueFill,
       borderWidth: 2,
       pointRadius: 3,
-      pointBackgroundColor: C.teal,
+      pointBackgroundColor: C.blue,
       pointHoverRadius: 5,
       fill: false,
       tension: 0.35,
@@ -182,7 +186,7 @@ const barData = {
   datasets: [{
     label: 'Pipelines',
     data: [45, 32, 28, 18, 14, 10],
-    backgroundColor: [C.amber, C.teal, C.violet, `${C.amber}99`, `${C.teal}99`, `${C.violet}99`],
+    backgroundColor: [C.amber, C.blue, C.violet, C.green, SEMANTIC.warning, SEMANTIC.info],
     borderRadius: 5,
     borderSkipped: false as const,
   }],
@@ -216,8 +220,8 @@ const donutData = {
   labels: ['Succès', 'En cours', 'Erreur', 'Arrêté'],
   datasets: [{
     data: [68, 20, 7, 5],
-    backgroundColor: [C.teal, C.amber, C.red, C.muted],
-    borderColor: '#161b2d',
+    backgroundColor: [C.green, C.amber, C.red, C.muted],
+    borderColor: '#121A23',
     borderWidth: 3,
     hoverOffset: 6,
   }],

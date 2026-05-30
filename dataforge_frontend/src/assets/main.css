@@ -29,11 +29,29 @@
   --border-default:  oklch(32% 0.01 258);
   --border-strong:   oklch(42% 0.01 258);
 
-  /* Semantic */
+  /* Semantic — full set with surfaces */
   --error:           oklch(64% 0.19 24);
   --error-surface:   oklch(18% 0.06 24);
   --success:         oklch(70% 0.15 148);
+  --success-surface: oklch(20% 0.06 148);
   --warning:         oklch(78% 0.14 80);
+  --warning-surface: oklch(20% 0.06 80);
+  --info:            oklch(67% 0.13 245);
+  --info-surface:    oklch(20% 0.06 245);
+
+  /* Text hierarchy — extends the primary/secondary/muted base
+     -hi = display headings · low/mute = annotations and disabled labels */
+  --text-hi:         oklch(96% 0.012 62);
+  --text-low:        oklch(56% 0.008 258);
+  --text-mute:       oklch(40% 0.006 258);
+
+  /* Chart palette — 4 distinct hues, all at similar lightness for
+     visual parity. Reduces chroma slightly compared to brand accent
+     so multiple series can sit together without clashing. */
+  --chart-1:         oklch(76% 0.14 62);    /* amber — matches brand accent */
+  --chart-2:         oklch(70% 0.13 245);   /* blue */
+  --chart-3:         oklch(72% 0.16 148);   /* green */
+  --chart-4:         oklch(70% 0.14 310);   /* violet */
 
   /* Spacing scale (4pt base) */
   --sp-1:  4px;
